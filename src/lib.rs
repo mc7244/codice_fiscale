@@ -77,9 +77,9 @@ static CHECKMODULI  : [char; 26] = [
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
 
- /// Constructor which creates a new CodiceFiscale struct from personal data,
- /// which has to be provided as a PersonData struct
 impl CodiceFiscale {
+    /// Constructor which creates a new CodiceFiscale struct from personal data,
+    /// which has to be provided as a PersonData struct
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale>  {
         let mut codice = "".to_string();
 
