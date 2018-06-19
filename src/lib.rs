@@ -42,7 +42,6 @@ mod errors {
 use errors::*;
 
 mod cfstatics;
-//use cfstatics::*;
 
 /// Gender enum to specify gender in PersonData struct
 /// Italian government only accepts either male or female!
@@ -57,12 +56,15 @@ pub enum Gender {
 pub struct PersonData {
     pub name: String,
     pub surname: String,
+    /// Birthdate must be a valid YYYY-MM-AA date
     pub birthdate: String,
     pub gender: Gender,
+    /// Belfiore codice for comune (ie E889). You must know it for now;
+    /// we may provide a database in the future
     pub comune: String,
 }
 
-/// Thee real thing: codice fiscale calculation
+/// The real thing: codice fiscale calculation
 #[derive(Debug, PartialEq)]
 pub struct CodiceFiscale {
     pub persondata: PersonData,
