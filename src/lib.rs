@@ -5,6 +5,13 @@
 //! This crate provide tools to manage the Italian *codice fiscale*, which
 //! (for anyone who doesn't live in Italy) is a code associated to every
 //! individual which helps with identification in public services.
+//! 
+//! We currently provide codice fiscale calculation. Check of the codice
+//! will be the next feature.
+//! 
+//! For anyone interested, here's an explanation (Italian language) on how
+//! the codice fiscale is calculated:
+//! https://it.wikipedia.org/wiki/Codice_fiscale#Generazione_del_codice_fiscale
 
 #![recursion_limit = "1024"]
 
