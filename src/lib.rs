@@ -6,7 +6,6 @@
 //! (for anyone who doesn't live in Italy) is a code associated to every
 //! individual which helps with identification in public services.
 
-// `error_chain!` can recurse deeply
 #![recursion_limit = "1024"]
 
 #[macro_use]
@@ -14,13 +13,17 @@ extern crate error_chain;
 
 extern crate regex;
 
-//mod error;
-
-//use error::*;
 use regex::Regex;
 
 mod errors {
-    error_chain! { }
+    error_chain! {
+        errors {
+            InvalidComune {
+                description("invalid-comune")
+                display("Invalid comune code, should be something like E889 - you supplied")
+            }
+        }
+    }
 }
 use errors::*;
 
@@ -49,7 +52,8 @@ impl CodiceFiscale {
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale>  {
         let rxc_comune = Regex::new(PAT_COMUNE).expect("Regex init error");
         if !rxc_comune.is_match(&initdata.comune)  {
-            bail!("Invalid comune code, should be something like E889".to_string());
+            return Err(ErrorKind::InvalidComune.into());
+            //bail!("Invalid comune code, should be something like E889".to_string());
             //return Err(CFError {
             //     message: "Invalid comune code, should be something like E889".to_string(),
             // } );

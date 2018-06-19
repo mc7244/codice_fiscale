@@ -22,7 +22,7 @@ fn t_new() {
 fn t_new_err_comune() {
     let mut persondata = init_sample1();
     persondata.comune = "EX".to_string();
-    assert_eq!(CodiceFiscale::new(&persondata).err().unwrap().description(), "Invalid comune code, should be something like E889");
+    assert_eq!(CodiceFiscale::new(&persondata).err().unwrap().description(), "invalid-comune");
 }
 
 #[test]
