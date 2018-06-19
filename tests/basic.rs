@@ -15,7 +15,7 @@ fn init_sample1() -> PersonData {
 #[test]
 fn t_new() {
     let persondata = init_sample1();
-    assert_eq!(CodiceFiscale::new(&persondata).unwrap(), CodiceFiscale { persondata: persondata });
+    assert_eq!(CodiceFiscale::new(&persondata).unwrap(), CodiceFiscale { persondata: persondata, codice : "".to_string() });
 }
 
 #[test]
