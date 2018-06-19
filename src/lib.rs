@@ -65,7 +65,7 @@ static CONSONANTS   : &str = "BCDFGHJKLMNPQRSTVWXYZ";
 static VOWELS       : &str = "AEIOU";
 static MONTHLETTERS : [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
 static PAT_COMUNE   : &str = r"\w\d\d\d";
-static CHECKMODULI  : [char; 26s] = [
+static CHECKMODULI  : [char; 26] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
@@ -159,7 +159,7 @@ impl CodiceFiscale {
             if chi.0 % 2 == 0 { odd_sum += cfstatics::CHARTABLE[&chi.1].0 }
             else { even_sum += cfstatics::CHARTABLE[&chi.1].1 }
         }
-        let chekidx : usize = (odd_sum + even_sum) % 26;
+        let checkidx : usize = (odd_sum + even_sum) % 26;
         codice.push(CHECKMODULI[checkidx]);
 
         Ok(CodiceFiscale {
