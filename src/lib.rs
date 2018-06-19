@@ -62,6 +62,7 @@ pub struct PersonData {
     pub comune: String,
 }
 
+/// Thee real thing: codice fiscale calculation
 #[derive(Debug, PartialEq)]
 pub struct CodiceFiscale {
     pub persondata: PersonData,
