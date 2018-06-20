@@ -16,9 +16,9 @@ fn init_sample1() -> PersonData {
 fn t_new() {
     let persondata = init_sample1();
     assert_eq!(
-        CodiceFiscale::new(&persondata).unwrap(),
-        CodiceFiscale { persondata: persondata, codice : "BLTMHL77S04E889G".to_string()
-    });
+        CodiceFiscale::new(&persondata).unwrap().codice(),
+        "BLTMHL77S04E889G".to_string()
+    );
 }
 
 #[test]
@@ -42,5 +42,13 @@ fn t_scoping() {
         let pdata = init_sample1();
         cf = CodiceFiscale::new(&pdata).unwrap();
     }
-    assert_eq!(cf.persondata.comune, "E889");
+    assert_eq!(cf.persondata().comune, "E889");
 }
+
+// #[test]
+// fn t_immutable() {
+//     let persondata = init_sample1();
+//     let cf = CodiceFiscale::new(&persondata).unwrap();
+//     let mut pdata = &cf.persondata();
+//     pdata.comune = "X400".to_string();
+// }

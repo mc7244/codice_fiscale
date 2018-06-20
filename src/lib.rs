@@ -64,11 +64,23 @@ pub struct PersonData {
     pub comune: String,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct CodiceFiscaleParts {
+    surname     : String,
+    name        : String,
+    birthyear   : String,
+    birthmonth  : char,
+    birthday    : String,
+    comune      : String,
+    checkchar   : char,
+}
+
 /// The real thing: codice fiscale calculation
 #[derive(Debug, PartialEq)]
 pub struct CodiceFiscale {
-    pub persondata: PersonData,
-    pub codice    : String,
+    persondata    : PersonData,
+    codice        : String,
+    codice_parts  : CodiceFiscaleParts,
 }
 
 static CONSONANTS   : &str = "BCDFGHJKLMNPQRSTVWXYZ";
@@ -84,12 +96,78 @@ impl CodiceFiscale {
     /// Constructor which creates a new CodiceFiscale struct from personal data,
     /// which has to be provided as a PersonData struct
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale>  {
+        let mut codice_fiscale = CodiceFiscale {
+            persondata      : initdata.clone(),
+            codice          : "".to_string(),
+            codice_parts    : CodiceFiscaleParts {
+                surname     : "".to_string(),
+                name        : "".to_string(),
+                birthyear   : "".to_string(),
+                birthmonth  : '_',
+                birthday    : "".to_string(),
+                comune      : "".to_string(),
+                checkchar   : '_',
+            }
+        };
         let mut codice = "".to_string();
 
-        // SURNAME
+        codice.push_str( &codice_fiscale.calc_surname() );
+        codice.push_str( &codice_fiscale.calc_name() );
+
+       // BIRTHDATE
+        let tm_birthdate : Tm;
+        match time::strptime(&initdata.birthdate, "%Y-%m-%d") {
+            Ok(v)   => tm_birthdate = v,
+            Err(_e) => return Err(ErrorKind::InvalidBirthdate.into())
+        };
+        let tm_year = tm_birthdate.tm_year;
+        codice.push_str(&
+            if tm_year < 100 { tm_year } else { tm_year - 100 }.to_string()
+        );
+        codice.push( MONTHLETTERS[tm_birthdate.tm_mon as usize] );
+        codice.push_str( &format!("{:02}",
+            if initdata.gender == Gender::F { 40+tm_birthdate.tm_mday } else { tm_birthdate.tm_mday }
+        ) );
+
+        let rxc_comune = Regex::new(PAT_COMUNE).expect("Regex init error");
+        if !rxc_comune.is_match(&initdata.comune)  {
+            return Err(ErrorKind::InvalidComune.into());
+        }
+        codice.push_str(&initdata.comune.to_uppercase());
+
+        let rxc_comune = Regex::new(PAT_COMUNE).expect("Regex init error");
+        if !rxc_comune.is_match(&initdata.comune)  {
+            return Err(ErrorKind::InvalidComune.into());
+        }
+        codice.push_str(&initdata.comune.to_uppercase());
+
+        // CHECK DIGIT
+        let mut odd_sum : usize = 0;
+        let mut even_sum : usize = 0;
+        for chi in codice.char_indices() {
+            if chi.0 % 2 == 0 { odd_sum += cfstatics::CHARTABLE[&chi.1].0 }
+            else { even_sum += cfstatics::CHARTABLE[&chi.1].1 }
+        }
+        let checkidx : usize = (odd_sum + even_sum) % 26;
+        codice.push(CHECKMODULI[checkidx]);
+
+        codice_fiscale.codice = codice;
+        Ok(codice_fiscale)
+    }
+
+    pub fn codice(&self) -> &str {
+        &self.codice
+    }
+
+    pub fn persondata(&self) -> &PersonData {
+        &self.persondata
+    }
+
+    // SURNAME
+    fn calc_surname(&self) -> String {
         let mut surname_consonants = String::new();
         let mut surname_vowels = String::new();
-        for ch in initdata.surname.to_uppercase().chars() {
+        for ch in self.persondata.surname.to_uppercase().chars() {
             //println!("{}", ch);
             if CONSONANTS.contains(ch) {
                 surname_consonants.push(ch);
@@ -111,12 +189,15 @@ impl CodiceFiscale {
         while cf_surname.len() < 3 {
             cf_surname.push('X');
         }
-        codice.push_str(&cf_surname);
+        
+        cf_surname
+    }
 
-        // NAME
+    // NAME
+    fn calc_name(&self) -> String {
         let mut name_consonants = String::new();
         let mut name_vowels = String::new();
-        for ch in initdata.name.to_uppercase().chars() {
+        for ch in self.persondata.name.to_uppercase().chars() {
             //println!("{}", ch);
             if CONSONANTS.contains(ch) {
                 name_consonants.push(ch);
@@ -139,43 +220,8 @@ impl CodiceFiscale {
                 cf_name.push('X');
             }
         }
-        codice.push_str(&cf_name);
 
-        // BIRTHDATE
-        let tm_birthdate : Tm;
-        match time::strptime(&initdata.birthdate, "%Y-%m-%d") {
-            Ok(v)   => tm_birthdate = v,
-            Err(_e) => return Err(ErrorKind::InvalidBirthdate.into())
-        };
-        let tm_year = tm_birthdate.tm_year;
-        codice.push_str(&
-            if tm_year < 100 { tm_year } else { tm_year - 100 }.to_string()
-        );
-        codice.push( MONTHLETTERS[tm_birthdate.tm_mon as usize] );
-        codice.push_str( &format!("{:02}",
-            if initdata.gender == Gender::F { 40+tm_birthdate.tm_mday } else { tm_birthdate.tm_mday }
-        ) );
-
-        let rxc_comune = Regex::new(PAT_COMUNE).expect("Regex init error");
-        if !rxc_comune.is_match(&initdata.comune)  {
-            return Err(ErrorKind::InvalidComune.into());
-        }
-        codice.push_str(&initdata.comune.to_uppercase());
-
-        // CHECK DIGIT
-        let mut odd_sum : usize = 0;
-        let mut even_sum : usize = 0;
-        for chi in codice.char_indices() {
-            if chi.0 % 2 == 0 { odd_sum += cfstatics::CHARTABLE[&chi.1].0 }
-            else { even_sum += cfstatics::CHARTABLE[&chi.1].1 }
-        }
-        let checkidx : usize = (odd_sum + even_sum) % 26;
-        codice.push(CHECKMODULI[checkidx]);
-
-        Ok(CodiceFiscale {
-            persondata: initdata.clone(),
-            codice    : codice,
-        })
+        cf_name
     }
 }
 
