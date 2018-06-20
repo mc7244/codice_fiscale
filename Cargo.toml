@@ -4,7 +4,7 @@ description = "Tools to calculate and verify Italian codice fiscale"
 version = "0.1.0"
 authors = ["Michele Beltrame <mb@italpro.net>"]
 repository = "https://github.com/lordarthas/codice_fiscale"
-keywords = ["codice fiscale", "business", "fiscal", "italy"]
+keywords = ["codice", "fiscale", "business", "fiscal", "italy"]
 license = "MPL-2.0"
 readme = "README.md"
 
