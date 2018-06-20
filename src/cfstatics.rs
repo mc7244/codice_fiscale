@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 lazy_static! {
-    pub static ref CHARTABLE: HashMap<char, (usize, usize)> = {
+    pub static ref CHECKCHARS: HashMap<char, (usize, usize)> = {
         let mut m = HashMap::new();
         m.insert('A', (1, 0));
         m.insert('B', (0, 1));
