@@ -5,6 +5,7 @@ version = "0.1.0"
 authors = ["Michele Beltrame <mb@italpro.net>"]
 repository = "https://github.com/lordarthas/codice_fiscale"
 keywords = ["codice", "fiscale", "business", "fiscal", "italy"]
+categories = ["algorithms", "parsing"]
 license = "MPL-2.0"
 readme = "README.md"
 

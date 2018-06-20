@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-//! This crate provide tools to manage the Italian *codice fiscale*, which
+//! This crate provides tools to manage the Italian *codice fiscale*, which
 //! (for anyone who doesn't live in Italy) is a code associated to every
 //! individual which helps with identification in public services.
 //! 
