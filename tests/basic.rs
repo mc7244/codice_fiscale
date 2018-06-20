@@ -29,7 +29,18 @@ fn t_new_err_comune() {
 }
 
 #[test]
-fn t_comune_ok() {
-    let cf = CodiceFiscale::new(&init_sample1()).unwrap();
+fn t_new_err_birthdate() {
+    let mut persondata = init_sample1();
+    persondata.birthdate = "1977-04-32".to_string();
+    assert_eq!(CodiceFiscale::new(&persondata).err().unwrap().description(), "invalid-birthdate");
+}
+
+#[test]
+fn t_scoping() {
+    let cf;
+    {
+        let pdata = init_sample1();
+        cf = CodiceFiscale::new(&pdata).unwrap();
+    }
     assert_eq!(cf.persondata.comune, "E889");
 }
