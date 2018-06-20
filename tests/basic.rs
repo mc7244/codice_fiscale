@@ -44,11 +44,3 @@ fn t_scoping() {
     }
     assert_eq!(cf.persondata().comune, "E889");
 }
-
-// #[test]
-// fn t_immutable() {
-//     let persondata = init_sample1();
-//     let cf = CodiceFiscale::new(&persondata).unwrap();
-//     let mut pdata = &cf.persondata();
-//     pdata.comune = "X400".to_string();
-// }
