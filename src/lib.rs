@@ -36,6 +36,14 @@ mod errors {
                 description("invalid-birthdate")
                 display("Invalid birthdate, please provide a YYYY-MM-DD format date")
             }
+            InvalidCodiceLen {
+                description("invalid-codicelen")
+                display("The length of a codice fiscale must be 16 characters")
+            }
+            InvalidCodiceCheckChar {
+                description("invalid-codicecheckchar")
+                display("The check char for this codice is not correct, so the codice is not a valid one")
+            }
         }
     }
 }
@@ -121,6 +129,45 @@ impl CodiceFiscale {
         codice.push( codice_fiscale.calc_checkchar() );
 
         codice_fiscale.codice = codice;
+        Ok(codice_fiscale)
+    }
+
+    /// Constructor which creates a new CodiceFiscale struct from personal data,
+    /// which has to be provided as a PersonData struct
+    pub fn parse(cf: &str) -> Result<CodiceFiscale>  {
+        let codice = cf.clone().to_string();
+
+        // First off, validate CF to see if it's a valid Code
+        if codice.len() != 16 {
+            return Err(ErrorKind::InvalidCodiceLen.into());
+        }
+
+        // let codice_nolast = codice.clone();
+        // if codice_fiscale.calc_checkchar() != LAST {
+
+        // }
+
+        //let codice_parts = 
+        let codice_fiscale = CodiceFiscale {
+            persondata      : PersonData {
+                name        : "".to_string(),
+                surname     : "".to_string(),
+                birthdate   : "".to_string(),
+                gender      : Gender::M,
+                comune      : "".to_string(),
+            },
+            codice          : codice.clone(),
+            codice_parts    : CodiceFiscaleParts {
+                surname     : "".to_string(),
+                name        : "".to_string(),
+                birthyear   : "".to_string(),
+                birthmonth  : '_',
+                birthday    : "".to_string(),
+                birthdate   : "".to_string(),
+                comune      : "".to_string(),
+                checkchar   : '_',
+            }
+        };
         Ok(codice_fiscale)
     }
 
