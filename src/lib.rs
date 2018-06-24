@@ -105,7 +105,7 @@ impl CodiceFiscale {
     /// Constructor which creates a new CodiceFiscale struct from personal data,
     /// which has to be provided as a PersonData struct
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale>  {
-        let mut codice_fiscale = CodiceFiscale {
+        let mut cf = CodiceFiscale {
             persondata      : initdata.clone(),
             codice          : "".to_string(),
             codice_parts    : CodiceFiscaleParts {
@@ -121,34 +121,21 @@ impl CodiceFiscale {
         };
 
         let mut codice = "".to_string();
-        codice.push_str( codice_fiscale.calc_surname() );
-        codice.push_str( codice_fiscale.calc_name() );
-        codice.push_str( codice_fiscale.calc_birthdate()? );
-        codice.push_str( codice_fiscale.calc_comune()? );
-        codice_fiscale.codice = codice.clone();
-        codice.push( codice_fiscale.calc_checkchar() );
+        codice.push_str( cf.calc_surname() );
+        codice.push_str( cf.calc_name() );
+        codice.push_str( cf.calc_birthdate()? );
+        codice.push_str( cf.calc_comune()? );
+        cf.codice = codice.clone();
+        codice.push( cf.calc_checkchar() );
 
-        codice_fiscale.codice = codice;
-        Ok(codice_fiscale)
+        cf.codice = codice;
+        Ok(cf)
     }
 
     /// Constructor which creates a new CodiceFiscale struct from personal data,
     /// which has to be provided as a PersonData struct
-    pub fn parse(cf: &str) -> Result<CodiceFiscale>  {
-        let codice = cf.clone().to_string();
-
-        // First off, validate CF to see if it's a valid Code
-        if codice.len() != 16 {
-            return Err(ErrorKind::InvalidCodiceLen.into());
-        }
-
-        // let codice_nolast = codice.clone();
-        // if codice_fiscale.calc_checkchar() != LAST {
-
-        // }
-
-        //let codice_parts = 
-        let codice_fiscale = CodiceFiscale {
+    pub fn parse(codice: &str) -> Result<CodiceFiscale>  {
+        let mut cf = CodiceFiscale {
             persondata      : PersonData {
                 name        : "".to_string(),
                 surname     : "".to_string(),
@@ -156,7 +143,7 @@ impl CodiceFiscale {
                 gender      : Gender::M,
                 comune      : "".to_string(),
             },
-            codice          : codice.clone(),
+            codice          : "".to_string(),
             codice_parts    : CodiceFiscaleParts {
                 surname     : "".to_string(),
                 name        : "".to_string(),
@@ -168,7 +155,37 @@ impl CodiceFiscale {
                 checkchar   : '_',
             }
         };
-        Ok(codice_fiscale)
+
+        // First off, validate CF to see if it's a valid Code
+        if codice.len() != 16 {
+            return Err(ErrorKind::InvalidCodiceLen.into());
+        }
+
+        // The let's see if the check char we calculate matches
+        let mut codice_nolast = codice.to_uppercase().to_string();
+        let codice_checkchar = match codice_nolast.pop() {
+            Some(cc)    => cc,
+            None        => return Err(ErrorKind::InvalidCodiceCheckChar.into())
+        }; 
+        cf.codice = codice_nolast.to_string();
+        if cf.calc_checkchar() != codice_checkchar {
+            return Err(ErrorKind::InvalidCodiceCheckChar.into());
+        }
+
+        // TODO: regexes to check structure!
+        cf.codice_parts.surname = codice[0..3].to_string();
+        cf.codice_parts.name = codice[3..6].to_string();
+        cf.codice_parts.birthyear = codice[7..9].to_string();
+        cf.codice_parts.birthmonth = codice.chars().nth(9).unwrap();
+        cf.codice_parts.birthday = codice[10..12].to_string();
+        // Who cares about full birthdate when parsing...
+        cf.codice_parts.comune = codice[13..16].to_string();
+
+        // cf.calc_persondata_from_parts()
+
+        cf.codice.push(codice_checkchar);
+
+        Ok(cf)
     }
 
     pub fn codice(&self) -> &str {

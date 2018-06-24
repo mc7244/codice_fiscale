@@ -44,3 +44,10 @@ fn t_scoping() {
     }
     assert_eq!(cf.persondata().comune, "E889");
 }
+
+#[test]
+fn t_parse_ok() {
+    let cf = CodiceFiscale::parse("BLTMHL77S04E889G");
+    // TODO: check whole persondata
+    assert_eq!(cf.unwrap().codice(), "BLTMHL77S04E889G");
+}
