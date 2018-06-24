@@ -188,10 +188,21 @@ impl CodiceFiscale {
         Ok(cf)
     }
 
+    /// Static method returns true if codice fiscale is valid, false otherwise.
+    /// This is the method almost everybody will use
+    pub fn check(codice: &str) -> bool  {
+        match CodiceFiscale::parse(codice) {
+            Ok(_cf)  => true,
+            Err(_e)  => false
+        }
+    }
+
+    /// Returns the codice
     pub fn codice(&self) -> &str {
         &self.codice
     }
 
+    /// Returns the person data
     pub fn persondata(&self) -> &PersonData {
         &self.persondata
     }

@@ -51,3 +51,8 @@ fn t_parse_ok() {
     // TODO: check whole persondata
     assert_eq!(cf.unwrap().codice(), "BLTMHL77S04E889G");
 }
+
+#[test]
+fn t_check_ok() {
+    assert_eq!(CodiceFiscale::check("BLTMHL77S04E889G"), true);
+}
