@@ -4,11 +4,11 @@ use codice_fiscale::*;
 
 fn init_sample1() -> PersonData {
     PersonData {
-        name: "Michele".to_string(),
-        surname: "Beltrame".to_string(),
-        birthdate: "1977-11-04".to_string(),
-        gender: Gender::M,
-        comune: "E889".to_string(),
+        name        : "Michele".to_string(),
+        surname     : "Beltrame".to_string(),
+        birthdate   : "1977-11-04".to_string(),
+        gender      : Gender::M,
+        belfiore    : "E889".to_string(),
     }
 }
 
@@ -22,9 +22,9 @@ fn t_new() {
 }
 
 #[test]
-fn t_new_err_comune() {
+fn t_new_err_belfiore() {
     let mut persondata = init_sample1();
-    persondata.comune = "EX".to_string();
+    persondata.belfiore = "EX".to_string();
     assert_eq!(
         format!("{}",CodiceFiscale::new(&persondata).err().unwrap()),
         "invalid-belfiore-code"
@@ -48,7 +48,7 @@ fn t_scoping() {
         let pdata = init_sample1();
         cf = CodiceFiscale::new(&pdata).unwrap();
     }
-    assert_eq!(cf.persondata().comune, "E889");
+    assert_eq!(cf.persondata().belfiore, "E889");
 }
 
 #[test]

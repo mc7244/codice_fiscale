@@ -55,14 +55,14 @@ pub enum Gender {
 /// codice fiscale
 #[derive(Debug, Clone, PartialEq)]
 pub struct PersonData {
-    pub name: String,
-    pub surname: String,
+    pub name        : String,
+    pub surname     : String,
     /// Birthdate must be a valid YYYY-MM-AA date
-    pub birthdate: String,
-    pub gender: Gender,
+    pub birthdate   : String,
+    pub gender      : Gender,
     /// Belfiore codice for comune (ie E889). You must know it for now;
     /// we may provide a database in the future
-    pub comune: String,
+    pub belfiore    : String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,7 +73,7 @@ struct CodiceFiscaleParts {
     birthmonth  : char,
     birthday    : String,
     birthdate   : String,
-    comune      : String,
+    belfiore    : String,
     checkchar   : char,
 }
 
@@ -88,7 +88,7 @@ pub struct CodiceFiscale {
 static CONSONANTS   : &str = "BCDFGHJKLMNPQRSTVWXYZ";
 static VOWELS       : &str = "AEIOU";
 static MONTHLETTERS : [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
-static PAT_COMUNE   : &str = r"\w\d\d\d";
+static PAT_BELFIORE : &str = r"\w\d\d\d";
 static CHECKMODULI  : [char; 26] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
@@ -150,7 +150,7 @@ impl CodiceFiscale {
                 birthmonth  : '_',
                 birthday    : "".to_string(),
                 birthdate   : "".to_string(),
-                comune      : "".to_string(),
+                belfiore    : "".to_string(),
                 checkchar   : '_',
             }
         };
@@ -159,7 +159,7 @@ impl CodiceFiscale {
         codice.push_str( cf.calc_surname() );
         codice.push_str( cf.calc_name() );
         codice.push_str( cf.calc_birthdate()? );
-        codice.push_str( cf.calc_comune()? );
+        codice.push_str( cf.calc_belfiore()? );
         cf.codice = codice.clone();
         codice.push( cf.calc_checkchar() );
 
@@ -176,7 +176,7 @@ impl CodiceFiscale {
                 surname     : "".to_string(),
                 birthdate   : "".to_string(),
                 gender      : Gender::M,
-                comune      : "".to_string(),
+                belfiore    : "".to_string(),
             },
             codice          : "".to_string(),
             codice_parts    : CodiceFiscaleParts {
@@ -186,7 +186,7 @@ impl CodiceFiscale {
                 birthmonth  : '_',
                 birthday    : "".to_string(),
                 birthdate   : "".to_string(),
-                comune      : "".to_string(),
+                belfiore     : "".to_string(),
                 checkchar   : '_',
             }
         };
@@ -214,7 +214,7 @@ impl CodiceFiscale {
         cf.codice_parts.birthmonth = codice.chars().nth(9).unwrap();
         cf.codice_parts.birthday = codice[10..12].to_string();
         // Who cares about full birthdate when parsing...
-        cf.codice_parts.comune = codice[13..16].to_string();
+        cf.codice_parts.belfiore = codice[13..16].to_string();
 
         // cf.calc_persondata_from_parts()
 
@@ -326,14 +326,14 @@ impl CodiceFiscale {
         Ok(&self.codice_parts.birthdate)
     }
 
-    fn calc_comune(&mut self) -> Result<&str, Error> {
-        let rxc_comune = Regex::new(PAT_COMUNE).expect("Regex init error");
-        if !rxc_comune.is_match(&self.persondata.comune)  {
+    fn calc_belfiore(&mut self) -> Result<&str, Error> {
+        let rxc_belfiore = Regex::new(PAT_BELFIORE).expect("Regex init error");
+        if !rxc_belfiore.is_match(&self.persondata.belfiore)  {
             bail!("invalid-belfiore-code");
         }
 
-        self.codice_parts.comune = self.persondata.comune.to_uppercase();
-        Ok(&self.codice_parts.comune)
+        self.codice_parts.belfiore = self.persondata.belfiore.to_uppercase();
+        Ok(&self.codice_parts.belfiore)
     }
 
     // CHECK CHAR
