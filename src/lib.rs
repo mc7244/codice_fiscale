@@ -13,43 +13,36 @@
 //! the codice fiscale is calculated:
 //! https://it.wikipedia.org/wiki/Codice_fiscale#Generazione_del_codice_fiscale
 
-#![recursion_limit = "1024"] // For error_chain
-
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate error_chain;
 extern crate time;
 extern crate regex;
 
+#[macro_use] extern crate failure;
+#[macro_use] extern crate lazy_static;
+
 use time::Tm;
 use regex::Regex;
+use failure::Error;
+use std::collections::HashMap;
 
-mod errors {
-    error_chain! {
-        errors {
-            InvalidComune {
-                description("invalid-comune")
-                display("Invalid comune code, should be something like E889")
-            }
-            InvalidBirthdate {
-                description("invalid-birthdate")
-                display("Invalid birthdate, please provide a YYYY-MM-DD format date")
-            }
-            InvalidCodiceLen {
-                description("invalid-codicelen")
-                display("The length of a codice fiscale must be 16 characters")
-            }
-            InvalidCodiceCheckChar {
-                description("invalid-codicecheckchar")
-                display("The check char for this codice is not correct, so the codice is not a valid one")
-            }
-        }
-    }
-}
-use errors::*;
-
-mod cfstatics;
+// #[derive(Debug, Fail)]
+// enum CodiceFiscaleError {
+//     #[fail(display = "Invalid Belfiore code: {}, should be something like E889", belfiore)]
+//     InvalidComune {
+//         belfiore: String,
+//     },
+//     #[fail(display = "Invalid birthdate: {}, please provide a YYYY-MM-DD format date", birthdate)]
+//     InvalidBirthdate {
+//         birthdate: String,
+//     },
+//     #[fail(display = "The length of a codice fiscale must be 16 characters", removeme)]
+//     InvalidCodiceLen {
+//         removeme: String,
+//     },
+//     #[fail(display = "The check char for this codice is not correct, so the codice is not a valid one", removeme)]
+//     InvalidCodiceCheckChar {
+//         removeme: String,
+//     }
+// }
 
 /// Gender enum to specify gender in PersonData struct
 /// Italian government only accepts either male or female!
@@ -100,11 +93,53 @@ static CHECKMODULI  : [char; 26] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
+lazy_static! {
+    static ref CHECKCHARS: HashMap<char, (u8, u8)> = {
+        let mut m = HashMap::new();
+        m.insert('A', (1, 0));
+        m.insert('B', (0, 1));
+        m.insert('C', (5, 2));
+        m.insert('D', (7, 3));
+        m.insert('E', (9, 4));
+        m.insert('F', (13, 5));
+        m.insert('G', (15, 6));
+        m.insert('H', (17, 7));
+        m.insert('I', (19, 8));
+        m.insert('J', (21, 9));
+        m.insert('K', (2, 10));
+        m.insert('L', (4, 11));
+        m.insert('M', (18, 12));
+        m.insert('N', (20, 13));
+        m.insert('O', (11, 14));
+        m.insert('P', (3, 15));
+        m.insert('Q', (6, 16));
+        m.insert('R', (8, 17));
+        m.insert('S', (12, 18));
+        m.insert('T', (14, 19));
+        m.insert('U', (16, 20));
+        m.insert('V', (10, 21));
+        m.insert('W', (22, 22));
+        m.insert('X', (25, 23));
+        m.insert('Y', (24, 24));
+        m.insert('Z', (23, 25));
+        m.insert('0', (1, 0));
+        m.insert('1', (0, 1));
+        m.insert('2', (5, 2));
+        m.insert('3', (7, 3));
+        m.insert('4', (9, 4));
+        m.insert('5', (13, 5));
+        m.insert('6', (15, 6));
+        m.insert('7', (17, 7));
+        m.insert('8', (19, 8));
+        m.insert('9', (21, 9));
+        m
+    };
+}
 
 impl CodiceFiscale {
     /// Constructor which creates a new CodiceFiscale struct from personal data,
     /// which has to be provided as a PersonData struct
-    pub fn new(initdata: &PersonData) -> Result<CodiceFiscale>  {
+    pub fn new(initdata: &PersonData) -> Result<CodiceFiscale, Error>  {
         let mut cf = CodiceFiscale {
             persondata      : initdata.clone(),
             codice          : "".to_string(),
@@ -134,7 +169,7 @@ impl CodiceFiscale {
 
     /// Constructor which creates a new CodiceFiscale struct from personal data,
     /// which has to be provided as a PersonData struct
-    pub fn parse(codice: &str) -> Result<CodiceFiscale>  {
+    pub fn parse(codice: &str) -> Result<CodiceFiscale, Error>  {
         let mut cf = CodiceFiscale {
             persondata      : PersonData {
                 name        : "".to_string(),
@@ -158,18 +193,18 @@ impl CodiceFiscale {
 
         // First off, validate CF to see if it's a valid Code
         if codice.len() != 16 {
-            return Err(ErrorKind::InvalidCodiceLen.into());
+            bail!("invalid-codice-len");
         }
 
         // The let's see if the check char we calculate matches
         let mut codice_nolast = codice.to_uppercase().to_string();
         let codice_checkchar = match codice_nolast.pop() {
             Some(cc)    => cc,
-            None        => return Err(ErrorKind::InvalidCodiceCheckChar.into())
+            None        => bail!("invalid-codice-checkchar")
         }; 
         cf.codice = codice_nolast.to_string();
         if cf.calc_checkchar() != codice_checkchar {
-            return Err(ErrorKind::InvalidCodiceCheckChar.into());
+            bail!("invalid-codice-checkchar");
         }
 
         // TODO: regexes to check structure!
@@ -270,12 +305,12 @@ impl CodiceFiscale {
         &self.codice_parts.name
     }
 
-    fn calc_birthdate(&mut self) -> Result<&str> {
+    fn calc_birthdate(&mut self) -> Result<&str, Error> {
        // BIRTHDATE
         let tm_birthdate : Tm;
         match time::strptime(&self.persondata.birthdate, "%Y-%m-%d") {
             Ok(v)   => tm_birthdate = v,
-            Err(_e) => return Err(ErrorKind::InvalidBirthdate.into())
+            Err(_e) => bail!("invalid-birthdate")
         };
         let tm_year = tm_birthdate.tm_year;
         self.codice_parts.birthyear =
@@ -291,10 +326,10 @@ impl CodiceFiscale {
         Ok(&self.codice_parts.birthdate)
     }
 
-    fn calc_comune(&mut self) -> Result<&str> {
+    fn calc_comune(&mut self) -> Result<&str, Error> {
         let rxc_comune = Regex::new(PAT_COMUNE).expect("Regex init error");
         if !rxc_comune.is_match(&self.persondata.comune)  {
-            return Err(ErrorKind::InvalidComune.into());
+            bail!("invalid-belfiore-code");
         }
 
         self.codice_parts.comune = self.persondata.comune.to_uppercase();
@@ -303,15 +338,14 @@ impl CodiceFiscale {
 
     // CHECK CHAR
     fn calc_checkchar(&mut self) -> char {
-        let mut odd_sum : usize = 0;
-        let mut even_sum : usize = 0;
-        for chi in self.codice.char_indices() {
-            if chi.0 % 2 == 0 { odd_sum += cfstatics::CHECKCHARS[&chi.1].0 }
-            else { even_sum += cfstatics::CHECKCHARS[&chi.1].1 }
-        }
-        let checkidx : usize = (odd_sum + even_sum) % 26;
+        let mut checksum : u8 = 0;
 
-        self.codice_parts.checkchar = CHECKMODULI[checkidx];
+        for chi in self.codice.char_indices() {
+            if chi.0 % 2 == 0 { checksum += CHECKCHARS[&chi.1].0 }
+            else { checksum += CHECKCHARS[&chi.1].1 }
+        }
+
+        self.codice_parts.checkchar = CHECKMODULI[(checksum % 26) as usize];
         self.codice_parts.checkchar
     }
 }

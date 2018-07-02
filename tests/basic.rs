@@ -25,14 +25,20 @@ fn t_new() {
 fn t_new_err_comune() {
     let mut persondata = init_sample1();
     persondata.comune = "EX".to_string();
-    assert_eq!(CodiceFiscale::new(&persondata).err().unwrap().description(), "invalid-comune");
+    assert_eq!(
+        format!("{}",CodiceFiscale::new(&persondata).err().unwrap()),
+        "invalid-belfiore-code"
+    );
 }
 
 #[test]
 fn t_new_err_birthdate() {
     let mut persondata = init_sample1();
     persondata.birthdate = "1977-04-32".to_string();
-    assert_eq!(CodiceFiscale::new(&persondata).err().unwrap().description(), "invalid-birthdate");
+    assert_eq!(
+        format!("{}",CodiceFiscale::new(&persondata).err().unwrap()),
+        "invalid-birthdate"
+    );
 }
 
 #[test]
