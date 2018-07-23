@@ -24,26 +24,6 @@ use regex::Regex;
 use failure::Error;
 use std::collections::HashMap;
 
-// #[derive(Debug, Fail)]
-// enum CodiceFiscaleError {
-//     #[fail(display = "Invalid Belfiore code: {}, should be something like E889", belfiore)]
-//     InvalidComune {
-//         belfiore: String,
-//     },
-//     #[fail(display = "Invalid birthdate: {}, please provide a YYYY-MM-DD format date", birthdate)]
-//     InvalidBirthdate {
-//         birthdate: String,
-//     },
-//     #[fail(display = "The length of a codice fiscale must be 16 characters", removeme)]
-//     InvalidCodiceLen {
-//         removeme: String,
-//     },
-//     #[fail(display = "The check char for this codice is not correct, so the codice is not a valid one", removeme)]
-//     InvalidCodiceCheckChar {
-//         removeme: String,
-//     }
-// }
-
 /// Gender enum to specify gender in PersonData struct
 /// Italian government only accepts either male or female!
 #[derive(Copy, Clone, Debug, PartialEq)]
