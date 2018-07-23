@@ -1,7 +1,10 @@
 # codice_fiscale
 
-A Rust crate under development which will allow to deal with Italian *codice fiscale*.
+A Rust crate which allows to deal with Italian *codice fiscale*.
 
-It currenly allows the creation of a codice fiscale.
+It currenly allows the creation, parsing and verification of a codice fiscale.
 
-Next goal is to be able to parse an existing codice.
+## TODO
+
+* Supply methods to figure out if a name and a surname can be valid for a codice
+* Be able to read a Belfiore codes database

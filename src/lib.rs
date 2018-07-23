@@ -87,6 +87,7 @@ pub struct CodiceFiscale {
 
 static CONSONANTS   : &str = "BCDFGHJKLMNPQRSTVWXYZ";
 static VOWELS       : &str = "AEIOU";
+static CENTURY_BASE : i32 = 2000; // This will need to be changed in 2100
 static MONTHLETTERS : [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
 static PAT_BELFIORE : &str = r"\w\d\d\d";
 static CHECKMODULI  : [char; 26] = [
@@ -193,33 +194,61 @@ impl CodiceFiscale {
 
         // First off, validate CF to see if it's a valid Code
         if codice.len() != 16 {
-            bail!("invalid-codice-len");
+            bail!("invalid-length");
         }
 
         // The let's see if the check char we calculate matches
         let mut codice_nolast = codice.to_uppercase().to_string();
         let codice_checkchar = match codice_nolast.pop() {
             Some(cc)    => cc,
-            None        => bail!("invalid-codice-checkchar")
+            None        => bail!("invalid-checkchar")
         }; 
         cf.codice = codice_nolast.to_string();
         if cf.calc_checkchar() != codice_checkchar {
-            bail!("invalid-codice-checkchar");
+            bail!("invalid-checkchar");
         }
 
-        // TODO: regexes to check structure!
         cf.codice_parts.surname = codice[0..3].to_string();
-        cf.codice_parts.name = codice[3..6].to_string();
-        cf.codice_parts.birthyear = codice[7..9].to_string();
-        cf.codice_parts.birthmonth = codice.chars().nth(9).unwrap();
-        cf.codice_parts.birthday = codice[10..12].to_string();
-        // Who cares about full birthdate when parsing...
-        cf.codice_parts.belfiore = codice[13..16].to_string();
+        if !Regex::new("^[A-Z]{3}$").unwrap().is_match(&cf.codice_parts.surname) {
+            bail!("invalid-surname");
+        }
+        cf.persondata.surname = cf.codice_parts.surname.clone();
 
-        // cf.calc_persondata_from_parts()
+        cf.codice_parts.name = codice[3..6].to_string();
+        if !Regex::new("^[A-Z]{3}$").unwrap().is_match(&cf.codice_parts.name) {
+            bail!("invalid-name");
+        }
+        cf.persondata.name = cf.codice_parts.name.clone();
+
+        // It is impossible to day with certainity to which century a 2-digits year belongs. So we suppose that if it's // in the future compared to now, it's in this century, otherwise in the past one
+        // (this has implications only for parsing, not for validation, unless we stump into and unexisting Feb29)
+        cf.codice_parts.birthyear = codice[6..8].to_string();
+        let birthyear_num
+            = CENTURY_BASE + i32::from_str_radix(&cf.codice_parts.birthyear, 10).expect("invalid-birthyear");
+        let tm_now_year = time::now_utc().tm_year + 1900;
+        let birthyear = if tm_now_year > birthyear_num { birthyear_num } else { birthyear_num - 100 };
+
+        cf.codice_parts.birthmonth = codice.chars().nth(8).unwrap();
+        cf.codice_parts.birthday = codice[9..11].to_string();
+        let mut birthdate : String =  format!("{:04}", birthyear);
+        birthdate.push('-');
+        let birthmonth = MONTHLETTERS.binary_search(&cf.codice_parts.birthmonth).expect("invalid-birthmonth");
+        birthdate.push_str( &format!("{:02}", (birthmonth + 1)) );
+        birthdate.push('-');
+        birthdate.push_str(&cf.codice_parts.birthday);
+        match time::strptime(&birthdate, "%Y-%m-%d") {
+            Ok(_v)  => cf.persondata.birthdate = birthdate,
+            Err(_e) => bail!("invalid-birthdate".to_string() + &birthdate)
+        };
+
+        cf.codice_parts.belfiore = codice[11..15].to_string();
+        let rxc_belfiore = Regex::new(PAT_BELFIORE).expect("Regex init error");
+        if !rxc_belfiore.is_match(&cf.codice_parts.belfiore)  {
+            bail!("invalid-belfiore-code");
+        }
+        cf.persondata.belfiore = cf.codice_parts.belfiore.clone();
 
         cf.codice.push(codice_checkchar);
-
         Ok(cf)
     }
 
@@ -306,20 +335,19 @@ impl CodiceFiscale {
     }
 
     fn calc_birthdate(&mut self) -> Result<&str, Error> {
-       // BIRTHDATE
+        // BIRTHDATE
         let tm_birthdate : Tm;
         match time::strptime(&self.persondata.birthdate, "%Y-%m-%d") {
             Ok(v)   => tm_birthdate = v,
             Err(_e) => bail!("invalid-birthdate")
         };
-        let tm_year = tm_birthdate.tm_year;
+        let tm_year = tm_birthdate.tm_year + 1900;
         self.codice_parts.birthyear =
-            if tm_year < 100 { tm_year } else { tm_year - 100 }.to_string();
+            if tm_year < CENTURY_BASE { tm_year - 1900 } else { tm_year - CENTURY_BASE }.to_string();
         self.codice_parts.birthmonth = MONTHLETTERS[tm_birthdate.tm_mon as usize];
         self.codice_parts.birthday = format!("{:02}",
             if self.persondata.gender == Gender::F { 40+tm_birthdate.tm_mday } else { tm_birthdate.tm_mday }
         );
-
         self.codice_parts.birthdate.push_str(&self.codice_parts.birthyear);
         self.codice_parts.birthdate.push(self.codice_parts.birthmonth);
         self.codice_parts.birthdate.push_str(&self.codice_parts.birthday);
@@ -339,6 +367,7 @@ impl CodiceFiscale {
     // CHECK CHAR
     fn calc_checkchar(&mut self) -> char {
         let mut checksum : u8 = 0;
+
 
         for chi in self.codice.char_indices() {
             if chi.0 % 2 == 0 { checksum += CHECKCHARS[&chi.1].0 }
