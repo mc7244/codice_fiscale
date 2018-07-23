@@ -77,7 +77,10 @@ struct CodiceFiscaleParts {
     checkchar   : char,
 }
 
-/// The real thing: codice fiscale calculation
+/// codice fiscale calculation and parsing
+/// Note: the PartialEq trait here supposes every PersonData and CodiceFiscaleParts match perfectly,
+/// which actually makes for identical persons and not only identical code.
+/// For comparison you might be better just comparing what is returned by codice() method
 #[derive(Debug, PartialEq)]
 pub struct CodiceFiscale {
     persondata    : PersonData,
@@ -138,7 +141,7 @@ lazy_static! {
 }
 
 impl CodiceFiscale {
-    /// Constructor which creates a new CodiceFiscale struct from personal data,
+    /// Constructor which creates a CodiceFiscale struct from personal data,
     /// which has to be provided as a PersonData struct
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale, Error>  {
         let mut cf = CodiceFiscale {
@@ -168,8 +171,7 @@ impl CodiceFiscale {
         Ok(cf)
     }
 
-    /// Constructor which creates a new CodiceFiscale struct from personal data,
-    /// which has to be provided as a PersonData struct
+    /// Constructor which creates a CodiceFiscale struct from a codice fiscale string
     pub fn parse(codice: &str) -> Result<CodiceFiscale, Error>  {
         let mut cf = CodiceFiscale {
             persondata      : PersonData {
