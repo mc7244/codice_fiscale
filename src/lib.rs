@@ -77,10 +77,11 @@ struct CodiceFiscaleParts {
     checkchar   : char,
 }
 
-/// codice fiscale calculation and parsing
-/// Note: the PartialEq trait here supposes every PersonData and CodiceFiscaleParts match perfectly,
-/// which actually makes for identical persons and not only identical code.
-/// For comparison you might be better just comparing what is returned by codice() method
+/// Codice fiscale calculation and parsing. The static method `check()` is most likely what you need.
+///
+/// Note: the *PartialEq* trait here supposes every *PersonData* and *CodiceFiscaleParts* fields are equal,
+/// which actually makes for identical persons and not only identical codice fiscale.
+/// For comparison you might be better just comparing what is returned by `codice()` method.
 #[derive(Debug, PartialEq)]
 pub struct CodiceFiscale {
     persondata    : PersonData,
@@ -141,8 +142,50 @@ lazy_static! {
 }
 
 impl CodiceFiscale {
+    /// **Static** method returns true if codice fiscale is valid, false otherwise. Behind the scenes,
+    /// it calls `parse()` and returns *false* in case of errors, *true* otherwise.
+    /// This is the method almost everybody will use. 
+    ///
+    /// # Examples
+    /// 
+    /// ```
+    /// use codice_fiscale::*;
+    /// 
+    /// if CodiceFiscale::check("BLTMHL77S04E889G") == true {
+    ///     println!("Codice is OK!");
+    /// }
+    /// ```
+    pub fn check(codice: &str) -> bool  {
+        match CodiceFiscale::parse(codice) {
+            Ok(_cf)  => true,
+            Err(_e)  => false
+        }
+    }
+      
     /// Constructor which creates a CodiceFiscale struct from personal data,
     /// which has to be provided as a PersonData struct
+    ///
+    /// # Examples
+    /// 
+    /// ```
+    /// use codice_fiscale::*;
+    /// 
+    /// match CodiceFiscale::new(&PersonData {
+    ///     name        : "Michele".to_string(),
+    ///     surname     : "Beltrame".to_string(),
+    ///     birthdate   : "1977-11-04".to_string(),
+    ///     gender      : Gender::M,
+    ///     belfiore    : "E889".to_string(),
+    /// }) {
+    ///     Ok(cf)  => println!("CF is: {}", cf.codice()),
+    ///     Err(e)  => println!("Some data was invalid: {:?}", e),    
+    /// }
+    /// ```
+    /// 
+    /// # Errors
+    /// 
+    /// * *invalid-birthdate* - not a valid YYYY-MM-DD date
+    /// * *invalid-belfiore-code* - only check structure: letter + 3 digits
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale, Error>  {
         let mut cf = CodiceFiscale {
             persondata      : initdata.clone(),
@@ -172,6 +215,31 @@ impl CodiceFiscale {
     }
 
     /// Constructor which creates a CodiceFiscale struct from a codice fiscale string
+    ///
+    /// # Examples
+    /// 
+    /// ```
+    /// use codice_fiscale::*;
+    /// 
+    /// match CodiceFiscale::parse("BLTMHL77S04E889G") {
+    ///     Ok(cf)  => println!("CF is OK, birthdate is: {}", cf.persondata().birthdate),
+    ///     Err(e)  => println!("Codice is invalid beacuse: {:?}", e),    
+    /// }
+    /// ```
+    /// 
+    /// # Errors
+    /// 
+    /// You will usually get one of the first two errors: if the checkchar matches, it's very difficult
+    /// for the codice fiscale to be incorrect, except if it was messed up on purpose.
+    /// 
+    /// * *invalid-length* - not 16 chars
+    /// * *invalid-checkchar* - final check char is not correct
+    /// * *invalid-surname* - not a 3-chars surname
+    /// * *invalid-name* - not a 3-chars name
+    /// * *invalid-birthyear*
+    /// * *invalid-birthmonth*
+    /// * *invalid-birthdate*
+    /// * *invalid-belfiore-code*
     pub fn parse(codice: &str) -> Result<CodiceFiscale, Error>  {
         let mut cf = CodiceFiscale {
             persondata      : PersonData {
@@ -254,16 +322,7 @@ impl CodiceFiscale {
         Ok(cf)
     }
 
-    /// Static method returns true if codice fiscale is valid, false otherwise.
-    /// This is the method almost everybody will use
-    pub fn check(codice: &str) -> bool  {
-        match CodiceFiscale::parse(codice) {
-            Ok(_cf)  => true,
-            Err(_e)  => false
-        }
-    }
-
-    /// Returns the codice
+    /// Returns the codice fiscale
     pub fn codice(&self) -> &str {
         &self.codice
     }
