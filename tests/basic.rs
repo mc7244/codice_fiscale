@@ -2,27 +2,27 @@
 extern crate codice_fiscale;
 use codice_fiscale::*;
 
-const TEST_CF_OK            : &str = "BLTMHL77S04E889G";
-const TEST_CF_ERR_CHECKCHAR : &str = "BLTMHL77S04E889Y";
-const TEST_BELFIORE         : &str = "E889";
+const TEST_CF_OK: &str = "BLTMHL77S04E889G";
+const TEST_CF_ERR_CHECKCHAR: &str = "BLTMHL77S04E889Y";
+const TEST_BELFIORE: &str = "E889";
 
 fn make_new_test_persondata() -> PersonData {
     PersonData {
-        name        : "Michele".to_string(),
-        surname     : "Beltrame".to_string(),
-        birthdate   : "1977-11-04".to_string(),
-        gender      : Gender::M,
-        belfiore    : TEST_BELFIORE.to_string(),
+        name: "Michele".to_string(),
+        surname: "Beltrame".to_string(),
+        birthdate: "1977-11-04".to_string(),
+        gender: Gender::M,
+        belfiore: TEST_BELFIORE.to_string(),
     }
 }
 
 fn make_parse_test_persondata() -> PersonData {
     PersonData {
-        name        : "MHL".to_string(),
-        surname     : "BLT".to_string(),
-        birthdate   : "1977-11-04".to_string(),
-        gender      : Gender::M,
-        belfiore    : TEST_BELFIORE.to_string(),
+        name: "MHL".to_string(),
+        surname: "BLT".to_string(),
+        birthdate: "1977-11-04".to_string(),
+        gender: Gender::M,
+        belfiore: TEST_BELFIORE.to_string(),
     }
 }
 
@@ -40,7 +40,7 @@ fn t_new_err_belfiore() {
     let mut persondata = make_new_test_persondata();
     persondata.belfiore = "EX".to_string();
     assert_eq!(
-        format!("{}",CodiceFiscale::new(&persondata).err().unwrap()),
+        format!("{}", CodiceFiscale::new(&persondata).err().unwrap()),
         "invalid-belfiore-code"
     );
 }
@@ -50,7 +50,7 @@ fn t_new_err_birthdate() {
     let mut persondata = make_new_test_persondata();
     persondata.birthdate = "1977-04-32".to_string();
     assert_eq!(
-        format!("{}",CodiceFiscale::new(&persondata).err().unwrap()),
+        format!("{}", CodiceFiscale::new(&persondata).err().unwrap()),
         "invalid-birthdate"
     );
 }
@@ -76,7 +76,10 @@ fn t_parse_ok() {
 #[test]
 fn t_parse_invalid_codice_checkchar() {
     assert_eq!(
-        format!( "{}", CodiceFiscale::parse(TEST_CF_ERR_CHECKCHAR).err().unwrap() ),
+        format!(
+            "{}",
+            CodiceFiscale::parse(TEST_CF_ERR_CHECKCHAR).err().unwrap()
+        ),
         "invalid-checkchar"
     );
 }
