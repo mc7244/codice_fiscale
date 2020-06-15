@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Municipality {
     pub name: String,
     pub province: String,
@@ -30,6 +31,6 @@ impl Belfiore {
     /// Obtain info for a Belfiore code
     pub fn lookup_belfiore(&self, belfiore: &str) -> Option<&Municipality> {
         self.store.iter()
-            .find(|x| x.belfiore_code == belfiore)
+            .find(|x| x.belfiore_code == belfiore.to_uppercase())
     }
 }

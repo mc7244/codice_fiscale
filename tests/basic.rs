@@ -4,25 +4,27 @@ use codice_fiscale::*;
 
 const TEST_CF_OK: &str = "BLTMHL77S04E889G";
 const TEST_CF_ERR_CHECKCHAR: &str = "BLTMHL77S04E889Y";
-const TEST_BELFIORE: &str = "E889";
+const TEST_MUNICIPALITY: &str = "Maniago";
 
 fn make_new_test_persondata() -> PersonData {
+    let store = belfiore::Belfiore::init();
     PersonData {
         name: "Michele".to_string(),
         surname: "Beltrame".to_string(),
         birthdate: "1977-11-04".to_string(),
         gender: Gender::M,
-        belfiore: TEST_BELFIORE.to_string(),
+        place_of_birth: store.get_info(TEST_MUNICIPALITY).unwrap().clone(),
     }
 }
 
 fn make_parse_test_persondata() -> PersonData {
+    let store = belfiore::Belfiore::init();
     PersonData {
         name: "MHL".to_string(),
         surname: "BLT".to_string(),
         birthdate: "1977-11-04".to_string(),
         gender: Gender::M,
-        belfiore: TEST_BELFIORE.to_string(),
+        place_of_birth: store.get_info(TEST_MUNICIPALITY).unwrap().clone(),
     }
 }
 
@@ -37,12 +39,8 @@ fn t_new() {
 
 #[test]
 fn t_new_err_belfiore() {
-    let mut persondata = make_new_test_persondata();
-    persondata.belfiore = "EX".to_string();
-    assert_eq!(
-        format!("{}", CodiceFiscale::new(&persondata).err().unwrap()),
-        "invalid-belfiore-code"
-    );
+    let store = belfiore::Belfiore::init();
+    assert!(store.lookup_belfiore("EX").is_none());
 }
 
 #[test]
@@ -62,7 +60,7 @@ fn t_scoping() {
         let pdata = make_new_test_persondata();
         cf = CodiceFiscale::new(&pdata).unwrap();
     }
-    assert_eq!(cf.persondata().belfiore, "E889");
+    assert_eq!(cf.persondata().place_of_birth.belfiore_code, "E889");
 }
 
 #[test]

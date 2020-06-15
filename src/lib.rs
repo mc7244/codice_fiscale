@@ -27,6 +27,7 @@ use failure::Error;
 use regex::Regex;
 use std::collections::HashMap;
 use time::Tm;
+use belfiore::*;
 
 /// Gender enum to specify gender in PersonData struct
 /// Italian government only accepts either male or female!
@@ -47,7 +48,7 @@ pub struct PersonData {
     pub gender: Gender,
     /// Belfiore codice for comune (ie E889). You must know it for now;
     /// we may provide a database in the future
-    pub belfiore: String,
+    pub place_of_birth: Municipality,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,7 +59,7 @@ struct CodiceFiscaleParts {
     birthmonth: char,
     birthday: String,
     birthdate: String,
-    belfiore: String,
+    place_of_birth: Municipality,
     checkchar: char,
 }
 
@@ -78,7 +79,6 @@ static CONSONANTS: &str = "BCDFGHJKLMNPQRSTVWXYZ";
 static VOWELS: &str = "AEIOU";
 static CENTURY_BASE: i32 = 2000; // This will need to be changed in 2100
 static MONTHLETTERS: [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
-static PAT_BELFIORE: &str = r"\w\d\d\d";
 static CHECKMODULI: [char; 26] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
     'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
@@ -124,6 +124,7 @@ lazy_static! {
         m.insert('9', (21, 9));
         m
     };
+    static ref BELFIORE_STORE: Belfiore = Belfiore::init();
 }
 
 impl CodiceFiscale {
@@ -154,13 +155,15 @@ impl CodiceFiscale {
     ///
     /// ```
     /// use codice_fiscale::*;
+    /// 
+    /// let store = belfiore::Belfiore::init();
     ///
     /// match CodiceFiscale::new(&PersonData {
-    ///     name        : "Michele".to_string(),
-    ///     surname     : "Beltrame".to_string(),
-    ///     birthdate   : "1977-11-04".to_string(),
-    ///     gender      : Gender::M,
-    ///     belfiore    : "E889".to_string(),
+    ///     name           : "Michele".to_string(),
+    ///     surname        : "Beltrame".to_string(),
+    ///     birthdate      : "1977-11-04".to_string(),
+    ///     gender         : Gender::M,
+    ///     place_of_birth : store.get_info("Rovigo").unwrap().clone(),
     /// }) {
     ///     Ok(cf)  => println!("CF is: {}", cf.codice()),
     ///     Err(e)  => println!("Some data was invalid: {:?}", e),    
@@ -170,7 +173,7 @@ impl CodiceFiscale {
     /// # Errors
     ///
     /// * *invalid-birthdate* - not a valid YYYY-MM-DD date
-    /// * *invalid-belfiore-code* - only check structure: letter + 3 digits
+    /// * *invalid-belfiore-code* - the place was not found in the database
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale, Error> {
         let mut cf = CodiceFiscale {
             persondata: initdata.clone(),
@@ -182,7 +185,7 @@ impl CodiceFiscale {
                 birthmonth: '_',
                 birthday: "".to_string(),
                 birthdate: "".to_string(),
-                belfiore: "".to_string(),
+                place_of_birth: Municipality::default(),
                 checkchar: '_',
             },
         };
@@ -232,7 +235,7 @@ impl CodiceFiscale {
                 surname: "".to_string(),
                 birthdate: "".to_string(),
                 gender: Gender::M,
-                belfiore: "".to_string(),
+                place_of_birth: Municipality::default(),
             },
             codice: "".to_string(),
             codice_parts: CodiceFiscaleParts {
@@ -242,7 +245,7 @@ impl CodiceFiscale {
                 birthmonth: '_',
                 birthday: "".to_string(),
                 birthdate: "".to_string(),
-                belfiore: "".to_string(),
+                place_of_birth: Municipality::default(),
                 checkchar: '_',
             },
         };
@@ -308,12 +311,11 @@ impl CodiceFiscale {
             Err(_e) => bail!("invalid-birthdate".to_string() + &birthdate),
         };
 
-        cf.codice_parts.belfiore = codice[11..15].to_string();
-        let rxc_belfiore = Regex::new(PAT_BELFIORE).expect("Regex init error");
-        if !rxc_belfiore.is_match(&cf.codice_parts.belfiore) {
-            bail!("invalid-belfiore-code");
-        }
-        cf.persondata.belfiore = cf.codice_parts.belfiore.clone();
+        cf.codice_parts.place_of_birth = match BELFIORE_STORE.lookup_belfiore(&codice[11..15]) {
+            Some(x) => x.clone(),
+            None => bail!("invalid-belfiore-code")
+        };
+        cf.persondata.place_of_birth = cf.codice_parts.place_of_birth.clone();
 
         cf.codice.push(codice_checkchar);
         Ok(cf)
@@ -427,13 +429,8 @@ impl CodiceFiscale {
     }
 
     fn calc_belfiore(&mut self) -> Result<&str, Error> {
-        let rxc_belfiore = Regex::new(PAT_BELFIORE).expect("Regex init error");
-        if !rxc_belfiore.is_match(&self.persondata.belfiore) {
-            bail!("invalid-belfiore-code");
-        }
-
-        self.codice_parts.belfiore = self.persondata.belfiore.to_uppercase();
-        Ok(&self.codice_parts.belfiore)
+        self.codice_parts.place_of_birth = self.persondata.place_of_birth.clone();
+        Ok(&self.codice_parts.place_of_birth.belfiore_code)
     }
 
     // CHECK CHAR
