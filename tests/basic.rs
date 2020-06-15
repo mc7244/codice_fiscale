@@ -84,5 +84,5 @@ fn t_parse_invalid_codice_checkchar() {
 
 #[test]
 fn t_check_ok() {
-    assert_eq!(CodiceFiscale::check(TEST_CF_OK), true);
+    assert_eq!(CodiceFiscale::check(TEST_CF_OK).is_ok(), true);
 }

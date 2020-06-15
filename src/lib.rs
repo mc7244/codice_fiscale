@@ -137,15 +137,13 @@ impl CodiceFiscale {
     /// ```
     /// use codice_fiscale::*;
     ///
-    /// if CodiceFiscale::check("BLTMHL77S04E889G") == true {
+    /// if CodiceFiscale::check("BLTMHL77S04E889G").is_ok() {
     ///     println!("Codice is OK!");
     /// }
     /// ```
-    pub fn check(codice: &str) -> bool {
-        match CodiceFiscale::parse(codice) {
-            Ok(_cf) => true,
-            Err(_e) => false,
-        }
+    pub fn check(codice: &str) -> Result<(), Error> {
+        CodiceFiscale::parse(codice)?;
+        Ok(())
     }
 
     /// Constructor which creates a CodiceFiscale struct from personal data,
