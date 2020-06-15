@@ -7,7 +7,7 @@ individual which helps with identification in public services.
 We currently provide codice fiscale calculation and check.
 
 For anyone interested, here's an explanation (Italian language) on how
-the codice fiscale is calculated:
+to calculate the codice fiscale:
 https://it.wikipedia.org/wiki/Codice_fiscale#Generazione_del_codice_fiscale
 
 ### TODO

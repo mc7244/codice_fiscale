@@ -21,6 +21,8 @@ extern crate failure;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod belfiore;
+
 use failure::Error;
 use regex::Regex;
 use std::collections::HashMap;
