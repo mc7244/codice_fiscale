@@ -129,7 +129,7 @@ lazy_static! {
 
 impl CodiceFiscale {
     /// **Static** method returns true if codice fiscale is valid, false otherwise. Behind the scenes,
-    /// it calls `parse()` and returns *false* in case of errors, *true* otherwise.
+    /// it calls `parse()` and returns *Ok(())* in case of errors, the *Error* otherwise.
     /// This is the method almost everybody will use.
     ///
     /// # Examples
