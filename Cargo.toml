@@ -1,7 +1,7 @@
 [package]
 name = "codice_fiscale"
 description = "Tools to calculate and verify Italian codice fiscale"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Michele Beltrame <mb@italpro.net>", "Eugenio Tampieri <eugenio@eutampieri.eu>"]
 repository = "https://github.com/lordarthas/codice_fiscale"
 keywords = ["codice", "fiscale", "business", "fiscal", "italy"]

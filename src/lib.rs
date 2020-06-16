@@ -8,10 +8,6 @@
 //! the codice fiscale is calculated:
 //! https://it.wikipedia.org/wiki/Codice_fiscale#Generazione_del_codice_fiscale
 //!
-//! ## TODO
-//!
-//! * Supply methods to figure out if a name and a surname can be valid for a codice
-//! * Be able to read a Belfiore codes database
 
 extern crate regex;
 extern crate time;
