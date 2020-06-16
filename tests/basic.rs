@@ -32,7 +32,7 @@ fn make_parse_test_persondata() -> PersonData {
 fn t_new() {
     let persondata = make_new_test_persondata();
     assert_eq!(
-        CodiceFiscale::new(&persondata).unwrap().codice(),
+        CodiceFiscale::new(&persondata).unwrap().get_codice(),
         TEST_CF_OK
     );
 }
@@ -60,14 +60,14 @@ fn t_scoping() {
         let pdata = make_new_test_persondata();
         cf = CodiceFiscale::new(&pdata).unwrap();
     }
-    assert_eq!(cf.persondata().place_of_birth.belfiore_code, "E889");
+    assert_eq!(cf.get_persondata().place_of_birth.belfiore_code, "E889");
 }
 
 #[test]
 fn t_parse_ok() {
     let cf = CodiceFiscale::parse(TEST_CF_OK).unwrap();
     let persondata = make_parse_test_persondata();
-    assert_eq!(cf.persondata(), &persondata);
+    assert_eq!(cf.get_persondata(), &persondata);
     // TODO: check whole persondata
 }
 
@@ -85,4 +85,20 @@ fn t_parse_invalid_codice_checkchar() {
 #[test]
 fn t_check_ok() {
     assert_eq!(CodiceFiscale::check(TEST_CF_OK).is_ok(), true);
+}
+
+#[test]
+fn t_check_name_validity() {
+    let persondata = make_new_test_persondata();
+    assert!(
+        CodiceFiscale::new(&persondata).unwrap().is_name_valid(&persondata.name)
+    );
+}
+
+#[test]
+fn t_check_surname_validity() {
+    let persondata = make_new_test_persondata();
+    assert!(
+        CodiceFiscale::new(&persondata).unwrap().is_surname_valid(&persondata.surname)
+    );
 }

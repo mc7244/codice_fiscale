@@ -10,20 +10,15 @@ fn is_consonant(c: &char) -> bool {
 }
 
 pub fn calc_name_component(name: &str) -> String {
-    let part_consonants: String = name.chars()
+    let part_consonants: String = name.to_uppercase().chars()
         .filter(|x| is_consonant(x))
-        .collect::<String>()
-        .to_uppercase();
-    let mut part_vowels: String = name.chars()
+        .collect();
+    let mut part_vowels: String = name.to_uppercase().chars()
         .filter(|x| is_vowel(x))
-        .collect::<String>()
-        .to_uppercase();
+        .collect();
+    println!("{} {}", part_consonants, part_vowels);
     let mut cf_part = String::new();
-    if part_consonants.len() > 3 {
-        cf_part.push_str(&part_consonants[..3]);
-    } else {
-        cf_part.push_str(&part_consonants);
-    }
+    cf_part.push_str(part_consonants.chars().take(3));
     // Push vowels if needed (and there are)
     while cf_part.len() < 3 && !part_vowels.is_empty() {
         cf_part.push(part_vowels.pop().unwrap());

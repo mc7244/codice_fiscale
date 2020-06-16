@@ -72,7 +72,7 @@ struct CodiceFiscaleParts {
 /// For comparison you might be better just comparing what is returned by `codice()` method.
 #[derive(Debug, PartialEq)]
 pub struct CodiceFiscale {
-    persondata: PersonData,
+    person_data: PersonData,
     codice: String,
     codice_parts: CodiceFiscaleParts,
 }
@@ -124,7 +124,7 @@ lazy_static! {
         m.insert('9', (21, 9));
         m
     };
-    static ref BELFIORE_STORE: Belfiore = Belfiore::init();
+    pub static ref BELFIORE_STORE: Belfiore = Belfiore::init();
 }
 
 impl CodiceFiscale {
@@ -154,14 +154,12 @@ impl CodiceFiscale {
     /// ```
     /// use codice_fiscale::*;
     /// 
-    /// let store = belfiore::Belfiore::init();
-    ///
     /// match CodiceFiscale::new(&PersonData {
     ///     name           : "Michele".to_string(),
     ///     surname        : "Beltrame".to_string(),
     ///     birthdate      : "1977-11-04".to_string(),
     ///     gender         : Gender::M,
-    ///     place_of_birth : store.get_info("Rovigo").unwrap().clone(),
+    ///     place_of_birth : BELFIORE_STORE.get_info("Rovigo").unwrap().clone(),
     /// }) {
     ///     Ok(cf)  => println!("CF is: {}", cf.codice()),
     ///     Err(e)  => println!("Some data was invalid: {:?}", e),    
@@ -174,7 +172,7 @@ impl CodiceFiscale {
     /// * *invalid-belfiore-code* - the place was not found in the database
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale, Error> {
         let mut cf = CodiceFiscale {
-            persondata: initdata.clone(),
+            person_data: initdata.clone(),
             codice: "".to_string(),
             codice_parts: CodiceFiscaleParts {
                 surname: "".to_string(),
@@ -228,7 +226,7 @@ impl CodiceFiscale {
     /// * *invalid-belfiore-code*
     pub fn parse(codice: &str) -> Result<CodiceFiscale, Error> {
         let mut cf = CodiceFiscale {
-            persondata: PersonData {
+            person_data: PersonData {
                 name: "".to_string(),
                 surname: "".to_string(),
                 birthdate: "".to_string(),
@@ -271,7 +269,7 @@ impl CodiceFiscale {
         {
             bail!("invalid-surname");
         }
-        cf.persondata.surname = cf.codice_parts.surname.clone();
+        cf.person_data.surname = cf.codice_parts.surname.clone();
 
         cf.codice_parts.name = codice[3..6].to_string();
         if !Regex::new("^[A-Z]{3}$")
@@ -280,7 +278,7 @@ impl CodiceFiscale {
         {
             bail!("invalid-name");
         }
-        cf.persondata.name = cf.codice_parts.name.clone();
+        cf.person_data.name = cf.codice_parts.name.clone();
 
         // It is impossible to day with certainity to which century a 2-digits year belongs. So we suppose that if it's // in the future compared to now, it's in this century, otherwise in the past one
         // (this has implications only for parsing, not for validation, unless we stump into and unexisting Feb29)
@@ -305,7 +303,7 @@ impl CodiceFiscale {
         birthdate.push('-');
         birthdate.push_str(&cf.codice_parts.birthday);
         match time::strptime(&birthdate, "%Y-%m-%d") {
-            Ok(_v) => cf.persondata.birthdate = birthdate,
+            Ok(_v) => cf.person_data.birthdate = birthdate,
             Err(_e) => bail!("invalid-birthdate".to_string() + &birthdate),
         };
 
@@ -313,38 +311,46 @@ impl CodiceFiscale {
             Some(x) => x.clone(),
             None => bail!("invalid-belfiore-code")
         };
-        cf.persondata.place_of_birth = cf.codice_parts.place_of_birth.clone();
+        cf.person_data.place_of_birth = cf.codice_parts.place_of_birth.clone();
 
         cf.codice.push(codice_checkchar);
         Ok(cf)
     }
 
     /// Returns the codice fiscale
-    pub fn codice(&self) -> &str {
+    pub fn get_codice(&self) -> &str {
         &self.codice
     }
 
     /// Returns the person data
-    pub fn persondata(&self) -> &PersonData {
-        &self.persondata
+    pub fn get_persondata(&self) -> &PersonData {
+        &self.person_data
+    }
+
+    pub fn is_name_valid(&self, name: &str) -> bool {
+        calc_name_component(name) == self.codice_parts.name
+    }
+
+    pub fn is_surname_valid(&self, surname: &str) -> bool {
+        calc_name_component(surname) == self.codice_parts.surname
     }
 
     // SURNAME
     fn calc_surname(&mut self) -> &str {
-        self.codice_parts.surname = calc_name_component(&self.persondata.surname);
+        self.codice_parts.surname = calc_name_component(&self.person_data.surname);
         &self.codice_parts.surname
     }
 
     // NAME
     fn calc_name(&mut self) -> &str {
-        self.codice_parts.name = calc_name_component(&self.persondata.name);
+        self.codice_parts.name = calc_name_component(&self.person_data.name);
         &self.codice_parts.name
     }
 
     fn calc_birthdate(&mut self) -> Result<&str, Error> {
         // BIRTHDATE
         let tm_birthdate: Tm;
-        match time::strptime(&self.persondata.birthdate, "%Y-%m-%d") {
+        match time::strptime(&self.person_data.birthdate, "%Y-%m-%d") {
             Ok(v) => tm_birthdate = v,
             Err(_e) => bail!("invalid-birthdate"),
         };
@@ -357,7 +363,7 @@ impl CodiceFiscale {
         self.codice_parts.birthmonth = MONTHLETTERS[tm_birthdate.tm_mon as usize];
         self.codice_parts.birthday = format!(
             "{:02}",
-            if self.persondata.gender == Gender::F {
+            if self.person_data.gender == Gender::F {
                 40 + tm_birthdate.tm_mday
             } else {
                 tm_birthdate.tm_mday
@@ -376,7 +382,7 @@ impl CodiceFiscale {
     }
 
     fn calc_belfiore(&mut self) -> Result<&str, Error> {
-        self.codice_parts.place_of_birth = self.persondata.place_of_birth.clone();
+        self.codice_parts.place_of_birth = self.person_data.place_of_birth.clone();
         Ok(&self.codice_parts.place_of_birth.belfiore_code)
     }
 
