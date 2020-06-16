@@ -323,7 +323,7 @@ impl CodiceFiscale {
     }
 
     pub fn is_name_valid(&self, name: &str) -> bool {
-        calc_name_component(name) == self.codice_parts.name
+        calc_name_component(&prepare_name(name)) == self.codice_parts.name
     }
 
     pub fn is_surname_valid(&self, surname: &str) -> bool {
@@ -338,7 +338,7 @@ impl CodiceFiscale {
 
     // NAME
     fn calc_name(&mut self) -> &str {
-        self.codice_parts.name = calc_name_component(&self.person_data.name);
+        self.codice_parts.name = calc_name_component(&prepare_name(&self.person_data.name));
         &self.codice_parts.name
     }
 

@@ -2,8 +2,8 @@
 extern crate codice_fiscale;
 use codice_fiscale::*;
 
-const TEST_CF_OK: &str = "BLTMCH77S04E889Q";
-const TEST_CF_ERR_CHECKCHAR: &str = "BLTMCH77S04E889Y";
+const TEST_CF_OK: &str = "BLTMHL77S04E889G";
+const TEST_CF_ERR_CHECKCHAR: &str = "BLTMHL77S04E889Y";
 const TEST_MUNICIPALITY: &str = "Maniago";
 
 fn make_new_test_persondata() -> PersonData {
@@ -20,7 +20,7 @@ fn make_new_test_persondata() -> PersonData {
 fn make_parse_test_persondata() -> PersonData {
     let store = belfiore::Belfiore::init();
     PersonData {
-        name: "MCH".to_string(),
+        name: "MHL".to_string(),
         surname: "BLT".to_string(),
         birthdate: "1977-11-04".to_string(),
         gender: Gender::M,
