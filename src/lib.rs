@@ -161,7 +161,7 @@ impl CodiceFiscale {
     ///     gender         : Gender::M,
     ///     place_of_birth : BELFIORE_STORE.get_info("Rovigo").unwrap().clone(),
     /// }) {
-    ///     Ok(cf)  => println!("CF is: {}", cf.codice()),
+    ///     Ok(cf)  => println!("CF is: {}", cf.get_codice()),
     ///     Err(e)  => println!("Some data was invalid: {:?}", e),    
     /// }
     /// ```
@@ -206,7 +206,7 @@ impl CodiceFiscale {
     /// use codice_fiscale::*;
     ///
     /// match CodiceFiscale::parse("BLTMHL77S04E889G") {
-    ///     Ok(cf)  => println!("CF is OK, birthdate is: {}", cf.persondata().birthdate),
+    ///     Ok(cf)  => println!("CF is OK, birthdate is: {}", cf.get_person_data().birthdate),
     ///     Err(e)  => println!("Codice is invalid beacuse: {:?}", e),    
     /// }
     /// ```
@@ -323,7 +323,7 @@ impl CodiceFiscale {
     }
 
     /// Returns the person data
-    pub fn get_persondata(&self) -> &PersonData {
+    pub fn get_person_data(&self) -> &PersonData {
         &self.person_data
     }
 
