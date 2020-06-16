@@ -27,7 +27,6 @@ mod utils;
 use failure::Error;
 use regex::Regex;
 use std::collections::HashMap;
-use time::Tm;
 use belfiore::*;
 use utils::*;
 
@@ -349,17 +348,17 @@ impl CodiceFiscale {
 
     fn calc_birthdate(&mut self) -> Result<&str, Error> {
         // BIRTHDATE
-        let tm_birthdate: Tm;
-        match time::strptime(&self.person_data.birthdate, "%Y-%m-%d") {
-            Ok(v) => tm_birthdate = v,
+        let tm_birthdate = match time::strptime(&self.person_data.birthdate, "%Y-%m-%d") {
+            Ok(v) => v,
             Err(_e) => bail!("invalid-birthdate"),
         };
+
         let tm_year = tm_birthdate.tm_year + 1900;
-        self.codice_parts.birthyear = if tm_year < CENTURY_BASE {
+        self.codice_parts.birthyear = format!("{:02}", if tm_year < CENTURY_BASE {
             tm_year - 1900
         } else {
             tm_year - CENTURY_BASE
-        }.to_string();
+        });
         self.codice_parts.birthmonth = MONTHLETTERS[tm_birthdate.tm_mon as usize];
         self.codice_parts.birthday = format!(
             "{:02}",
