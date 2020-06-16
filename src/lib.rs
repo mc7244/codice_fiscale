@@ -17,6 +17,7 @@ extern crate failure;
 #[macro_use]
 extern crate lazy_static;
 
+/// This module contains Belfiore codes and it's used to lookup municipality info
 pub mod belfiore;
 mod utils;
 
@@ -26,7 +27,7 @@ use std::collections::HashMap;
 use belfiore::*;
 use utils::*;
 
-/// Gender enum to specify gender in PersonData struct
+/// Gender enum to specify gender in PersonData struct.
 /// Italian government only accepts either male or female!
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Gender {
@@ -119,6 +120,7 @@ lazy_static! {
         m.insert('9', (21, 9));
         m
     };
+    /// This is a static Belfiore codes DB
     pub static ref BELFIORE_STORE: Belfiore = Belfiore::init();
 }
 
@@ -322,10 +324,12 @@ impl CodiceFiscale {
         &self.person_data
     }
 
+    /// Check if the given name is valid for this fiscal code
     pub fn is_name_valid(&self, name: &str) -> bool {
         calc_name_component(&prepare_name(name)) == self.codice_parts.name
     }
 
+    /// Check if the given surname is valid for this fiscal code
     pub fn is_surname_valid(&self, surname: &str) -> bool {
         calc_name_component(surname) == self.codice_parts.surname
     }

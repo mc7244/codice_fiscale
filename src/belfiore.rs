@@ -1,3 +1,4 @@
+/// This struct represents a municipality
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Municipality {
     pub name: String,
@@ -5,6 +6,7 @@ pub struct Municipality {
     pub belfiore_code: String,
 }
 
+/// The database, you can query it using the following functions
 pub struct Belfiore {
     store: Vec<Municipality>
 }
