@@ -13,8 +13,8 @@ impl Belfiore {
     /// Initialize the struct using belfiore.txt
     pub fn init() -> Self {
         let db: Vec<Municipality> = include_str!("../belfiore.txt")
-            .split("\n")
-            .map(|x| x.split(",").collect::<Vec<&str>>())
+            .split('\n')
+            .map(|x| x.split(',').collect::<Vec<&str>>())
             .map(|x| Municipality{
                 name: x[2].to_owned(),
                 province: x[1].to_owned(),

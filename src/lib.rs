@@ -22,12 +22,14 @@ extern crate failure;
 extern crate lazy_static;
 
 pub mod belfiore;
+mod utils;
 
 use failure::Error;
 use regex::Regex;
 use std::collections::HashMap;
 use time::Tm;
 use belfiore::*;
+use utils::*;
 
 /// Gender enum to specify gender in PersonData struct
 /// Italian government only accepts either male or female!
@@ -75,8 +77,6 @@ pub struct CodiceFiscale {
     codice_parts: CodiceFiscaleParts,
 }
 
-static CONSONANTS: &str = "BCDFGHJKLMNPQRSTVWXYZ";
-static VOWELS: &str = "AEIOU";
 static CENTURY_BASE: i32 = 2000; // This will need to be changed in 2100
 static MONTHLETTERS: [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
 static CHECKMODULI: [char; 26] = [
@@ -254,12 +254,12 @@ impl CodiceFiscale {
         }
 
         // The let's see if the check char we calculate matches
-        let mut codice_nolast = codice.to_uppercase().to_string();
+        let mut codice_nolast = codice.to_uppercase();
         let codice_checkchar = match codice_nolast.pop() {
             Some(cc) => cc,
             None => bail!("invalid-checkchar"),
         };
-        cf.codice = codice_nolast.to_string();
+        cf.codice = codice_nolast;
         if cf.calc_checkchar() != codice_checkchar {
             bail!("invalid-checkchar");
         }
@@ -331,64 +331,13 @@ impl CodiceFiscale {
 
     // SURNAME
     fn calc_surname(&mut self) -> &str {
-        let mut surname_consonants = String::new();
-        let mut surname_vowels = String::new();
-        for ch in self.persondata.surname.to_uppercase().chars() {
-            //println!("{}", ch);
-            if CONSONANTS.contains(ch) {
-                surname_consonants.push(ch);
-            } else if VOWELS.contains(ch) {
-                surname_vowels.push(ch);
-            }
-        }
-        let mut cf_surname = String::new();
-        if surname_consonants.len() > 3 {
-            cf_surname.push_str(&surname_consonants[..3]);
-        } else {
-            cf_surname.push_str(&surname_consonants);
-        }
-        // Push vowels if needed (and there are)
-        while cf_surname.len() < 3 && surname_vowels.len() > 0 {
-            cf_surname.push(surname_vowels.remove(0));
-        }
-        // Push Xs for missing chars
-        while cf_surname.len() < 3 {
-            cf_surname.push('X');
-        }
-
-        self.codice_parts.surname = cf_surname;
+        self.codice_parts.surname = calc_name_component(&self.persondata.surname);
         &self.codice_parts.surname
     }
 
     // NAME
     fn calc_name(&mut self) -> &str {
-        let mut name_consonants = String::new();
-        let mut name_vowels = String::new();
-        for ch in self.persondata.name.to_uppercase().chars() {
-            //println!("{}", ch);
-            if CONSONANTS.contains(ch) {
-                name_consonants.push(ch);
-            } else if VOWELS.contains(ch) {
-                name_vowels.push(ch);
-            }
-        }
-        let mut cf_name = String::new();
-        if name_consonants.len() > 3 {
-            cf_name.push_str(&name_consonants[..1]);
-            cf_name.push_str(&name_consonants[2..4]);
-        } else {
-            cf_name.push_str(&name_consonants);
-            // Push vowels if needed (and there are)
-            while cf_name.len() < 3 && name_vowels.len() > 0 {
-                cf_name.push(name_vowels.remove(0));
-            }
-            // Push Xs for missing chars
-            while cf_name.len() < 3 {
-                cf_name.push('X');
-            }
-        }
-
-        self.codice_parts.name = cf_name;
+        self.codice_parts.name = calc_name_component(&self.persondata.name);
         &self.codice_parts.name
     }
 
@@ -433,15 +382,14 @@ impl CodiceFiscale {
 
     // CHECK CHAR
     fn calc_checkchar(&mut self) -> char {
-        let mut checksum: u8 = 0;
-
-        for chi in self.codice.char_indices() {
-            if chi.0 % 2 == 0 {
-                checksum += CHECKCHARS[&chi.1].0
-            } else {
-                checksum += CHECKCHARS[&chi.1].1
-            }
-        }
+        let checksum: u8 = self.codice.char_indices()
+            .fold(0, |acc, x| {
+                acc + if x.0 % 2 == 0 {
+                    CHECKCHARS[&x.1].0
+                } else {
+                    CHECKCHARS[&x.1].1
+                }
+            });
 
         self.codice_parts.checkchar = CHECKMODULI[(checksum % 26) as usize];
         self.codice_parts.checkchar
