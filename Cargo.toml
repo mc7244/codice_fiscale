@@ -1,8 +1,8 @@
 [package]
 name = "codice_fiscale"
 description = "Tools to calculate and verify Italian codice fiscale"
-version = "0.2.0"
-authors = ["Michele Beltrame <mb@italpro.net>"]
+version = "0.3.0"
+authors = ["Michele Beltrame <mb@italpro.net>", "Eugenio Tampieri <eugenio@eutampieri.eu>"]
 repository = "https://github.com/lordarthas/codice_fiscale"
 keywords = ["codice", "fiscale", "business", "fiscal", "italy"]
 categories = ["algorithms", "parsing"]
@@ -10,7 +10,7 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-failure = "0.1.1"
-lazy_static = "1.0.1"
-regex = "0.2.11"
+failure = "0.1.8"
+lazy_static = "1.4.0"
 time = "0.1.40"
+regex = "1.3.9"

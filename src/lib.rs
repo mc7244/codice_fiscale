@@ -8,10 +8,6 @@
 //! the codice fiscale is calculated:
 //! https://it.wikipedia.org/wiki/Codice_fiscale#Generazione_del_codice_fiscale
 //!
-//! ## TODO
-//!
-//! * Supply methods to figure out if a name and a surname can be valid for a codice
-//! * Be able to read a Belfiore codes database
 
 extern crate regex;
 extern crate time;
@@ -21,12 +17,17 @@ extern crate failure;
 #[macro_use]
 extern crate lazy_static;
 
+/// This module contains Belfiore codes and it's used to lookup municipality info
+pub mod belfiore;
+mod utils;
+
 use failure::Error;
 use regex::Regex;
 use std::collections::HashMap;
-use time::Tm;
+use belfiore::*;
+use utils::*;
 
-/// Gender enum to specify gender in PersonData struct
+/// Gender enum to specify gender in PersonData struct.
 /// Italian government only accepts either male or female!
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Gender {
@@ -45,7 +46,7 @@ pub struct PersonData {
     pub gender: Gender,
     /// Belfiore codice for comune (ie E889). You must know it for now;
     /// we may provide a database in the future
-    pub belfiore: String,
+    pub place_of_birth: Municipality,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -56,7 +57,7 @@ struct CodiceFiscaleParts {
     birthmonth: char,
     birthday: String,
     birthdate: String,
-    belfiore: String,
+    place_of_birth: Municipality,
     checkchar: char,
 }
 
@@ -67,16 +68,13 @@ struct CodiceFiscaleParts {
 /// For comparison you might be better just comparing what is returned by `codice()` method.
 #[derive(Debug, PartialEq)]
 pub struct CodiceFiscale {
-    persondata: PersonData,
+    person_data: PersonData,
     codice: String,
     codice_parts: CodiceFiscaleParts,
 }
 
-static CONSONANTS: &str = "BCDFGHJKLMNPQRSTVWXYZ";
-static VOWELS: &str = "AEIOU";
 static CENTURY_BASE: i32 = 2000; // This will need to be changed in 2100
 static MONTHLETTERS: [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
-static PAT_BELFIORE: &str = r"\w\d\d\d";
 static CHECKMODULI: [char; 26] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
     'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
@@ -122,11 +120,13 @@ lazy_static! {
         m.insert('9', (21, 9));
         m
     };
+    /// This is a static Belfiore codes DB
+    pub static ref BELFIORE_STORE: Belfiore = Belfiore::init();
 }
 
 impl CodiceFiscale {
     /// **Static** method returns true if codice fiscale is valid, false otherwise. Behind the scenes,
-    /// it calls `parse()` and returns *false* in case of errors, *true* otherwise.
+    /// it calls `parse()` and returns *Ok(())* in case of errors, the *Error* otherwise.
     /// This is the method almost everybody will use.
     ///
     /// # Examples
@@ -134,15 +134,13 @@ impl CodiceFiscale {
     /// ```
     /// use codice_fiscale::*;
     ///
-    /// if CodiceFiscale::check("BLTMHL77S04E889G") == true {
+    /// if CodiceFiscale::check("BLTMHL77S04E889G").is_ok() {
     ///     println!("Codice is OK!");
     /// }
     /// ```
-    pub fn check(codice: &str) -> bool {
-        match CodiceFiscale::parse(codice) {
-            Ok(_cf) => true,
-            Err(_e) => false,
-        }
+    pub fn check(codice: &str) -> Result<(), Error> {
+        CodiceFiscale::parse(codice)?;
+        Ok(())
     }
 
     /// Constructor which creates a CodiceFiscale struct from personal data,
@@ -152,15 +150,15 @@ impl CodiceFiscale {
     ///
     /// ```
     /// use codice_fiscale::*;
-    ///
+    /// 
     /// match CodiceFiscale::new(&PersonData {
-    ///     name        : "Michele".to_string(),
-    ///     surname     : "Beltrame".to_string(),
-    ///     birthdate   : "1977-11-04".to_string(),
-    ///     gender      : Gender::M,
-    ///     belfiore    : "E889".to_string(),
+    ///     name           : "Michele".to_string(),
+    ///     surname        : "Beltrame".to_string(),
+    ///     birthdate      : "1977-11-04".to_string(),
+    ///     gender         : Gender::M,
+    ///     place_of_birth : BELFIORE_STORE.get_info("Rovigo").unwrap().clone(),
     /// }) {
-    ///     Ok(cf)  => println!("CF is: {}", cf.codice()),
+    ///     Ok(cf)  => println!("CF is: {}", cf.get_codice()),
     ///     Err(e)  => println!("Some data was invalid: {:?}", e),    
     /// }
     /// ```
@@ -168,10 +166,10 @@ impl CodiceFiscale {
     /// # Errors
     ///
     /// * *invalid-birthdate* - not a valid YYYY-MM-DD date
-    /// * *invalid-belfiore-code* - only check structure: letter + 3 digits
+    /// * *invalid-belfiore-code* - the place was not found in the database
     pub fn new(initdata: &PersonData) -> Result<CodiceFiscale, Error> {
         let mut cf = CodiceFiscale {
-            persondata: initdata.clone(),
+            person_data: initdata.clone(),
             codice: "".to_string(),
             codice_parts: CodiceFiscaleParts {
                 surname: "".to_string(),
@@ -180,7 +178,7 @@ impl CodiceFiscale {
                 birthmonth: '_',
                 birthday: "".to_string(),
                 birthdate: "".to_string(),
-                belfiore: "".to_string(),
+                place_of_birth: Municipality::default(),
                 checkchar: '_',
             },
         };
@@ -205,7 +203,7 @@ impl CodiceFiscale {
     /// use codice_fiscale::*;
     ///
     /// match CodiceFiscale::parse("BLTMHL77S04E889G") {
-    ///     Ok(cf)  => println!("CF is OK, birthdate is: {}", cf.persondata().birthdate),
+    ///     Ok(cf)  => println!("CF is OK, birthdate is: {}", cf.get_person_data().birthdate),
     ///     Err(e)  => println!("Codice is invalid beacuse: {:?}", e),    
     /// }
     /// ```
@@ -225,12 +223,12 @@ impl CodiceFiscale {
     /// * *invalid-belfiore-code*
     pub fn parse(codice: &str) -> Result<CodiceFiscale, Error> {
         let mut cf = CodiceFiscale {
-            persondata: PersonData {
+            person_data: PersonData {
                 name: "".to_string(),
                 surname: "".to_string(),
                 birthdate: "".to_string(),
                 gender: Gender::M,
-                belfiore: "".to_string(),
+                place_of_birth: Municipality::default(),
             },
             codice: "".to_string(),
             codice_parts: CodiceFiscaleParts {
@@ -240,7 +238,7 @@ impl CodiceFiscale {
                 birthmonth: '_',
                 birthday: "".to_string(),
                 birthdate: "".to_string(),
-                belfiore: "".to_string(),
+                place_of_birth: Municipality::default(),
                 checkchar: '_',
             },
         };
@@ -251,12 +249,12 @@ impl CodiceFiscale {
         }
 
         // The let's see if the check char we calculate matches
-        let mut codice_nolast = codice.to_uppercase().to_string();
+        let mut codice_nolast = codice.to_uppercase();
         let codice_checkchar = match codice_nolast.pop() {
             Some(cc) => cc,
             None => bail!("invalid-checkchar"),
         };
-        cf.codice = codice_nolast.to_string();
+        cf.codice = codice_nolast;
         if cf.calc_checkchar() != codice_checkchar {
             bail!("invalid-checkchar");
         }
@@ -268,7 +266,7 @@ impl CodiceFiscale {
         {
             bail!("invalid-surname");
         }
-        cf.persondata.surname = cf.codice_parts.surname.clone();
+        cf.person_data.surname = cf.codice_parts.surname.clone();
 
         cf.codice_parts.name = codice[3..6].to_string();
         if !Regex::new("^[A-Z]{3}$")
@@ -277,7 +275,7 @@ impl CodiceFiscale {
         {
             bail!("invalid-name");
         }
-        cf.persondata.name = cf.codice_parts.name.clone();
+        cf.person_data.name = cf.codice_parts.name.clone();
 
         // It is impossible to day with certainity to which century a 2-digits year belongs. So we suppose that if it's // in the future compared to now, it's in this century, otherwise in the past one
         // (this has implications only for parsing, not for validation, unless we stump into and unexisting Feb29)
@@ -302,111 +300,69 @@ impl CodiceFiscale {
         birthdate.push('-');
         birthdate.push_str(&cf.codice_parts.birthday);
         match time::strptime(&birthdate, "%Y-%m-%d") {
-            Ok(_v) => cf.persondata.birthdate = birthdate,
+            Ok(_v) => cf.person_data.birthdate = birthdate,
             Err(_e) => bail!("invalid-birthdate".to_string() + &birthdate),
         };
 
-        cf.codice_parts.belfiore = codice[11..15].to_string();
-        let rxc_belfiore = Regex::new(PAT_BELFIORE).expect("Regex init error");
-        if !rxc_belfiore.is_match(&cf.codice_parts.belfiore) {
-            bail!("invalid-belfiore-code");
-        }
-        cf.persondata.belfiore = cf.codice_parts.belfiore.clone();
+        cf.codice_parts.place_of_birth = match BELFIORE_STORE.lookup_belfiore(&codice[11..15]) {
+            Some(x) => x.clone(),
+            None => bail!("invalid-belfiore-code")
+        };
+        cf.person_data.place_of_birth = cf.codice_parts.place_of_birth.clone();
 
         cf.codice.push(codice_checkchar);
         Ok(cf)
     }
 
     /// Returns the codice fiscale
-    pub fn codice(&self) -> &str {
+    pub fn get_codice(&self) -> &str {
         &self.codice
     }
 
     /// Returns the person data
-    pub fn persondata(&self) -> &PersonData {
-        &self.persondata
+    pub fn get_person_data(&self) -> &PersonData {
+        &self.person_data
+    }
+
+    /// Check if the given name is valid for this fiscal code
+    pub fn is_name_valid(&self, name: &str) -> bool {
+        calc_name_component(&prepare_name(name)) == self.codice_parts.name
+    }
+
+    /// Check if the given surname is valid for this fiscal code
+    pub fn is_surname_valid(&self, surname: &str) -> bool {
+        calc_name_component(surname) == self.codice_parts.surname
     }
 
     // SURNAME
     fn calc_surname(&mut self) -> &str {
-        let mut surname_consonants = String::new();
-        let mut surname_vowels = String::new();
-        for ch in self.persondata.surname.to_uppercase().chars() {
-            //println!("{}", ch);
-            if CONSONANTS.contains(ch) {
-                surname_consonants.push(ch);
-            } else if VOWELS.contains(ch) {
-                surname_vowels.push(ch);
-            }
-        }
-        let mut cf_surname = String::new();
-        if surname_consonants.len() > 3 {
-            cf_surname.push_str(&surname_consonants[..3]);
-        } else {
-            cf_surname.push_str(&surname_consonants);
-        }
-        // Push vowels if needed (and there are)
-        while cf_surname.len() < 3 && surname_vowels.len() > 0 {
-            cf_surname.push(surname_vowels.remove(0));
-        }
-        // Push Xs for missing chars
-        while cf_surname.len() < 3 {
-            cf_surname.push('X');
-        }
-
-        self.codice_parts.surname = cf_surname;
+        self.codice_parts.surname = calc_name_component(&self.person_data.surname);
         &self.codice_parts.surname
     }
 
     // NAME
     fn calc_name(&mut self) -> &str {
-        let mut name_consonants = String::new();
-        let mut name_vowels = String::new();
-        for ch in self.persondata.name.to_uppercase().chars() {
-            //println!("{}", ch);
-            if CONSONANTS.contains(ch) {
-                name_consonants.push(ch);
-            } else if VOWELS.contains(ch) {
-                name_vowels.push(ch);
-            }
-        }
-        let mut cf_name = String::new();
-        if name_consonants.len() > 3 {
-            cf_name.push_str(&name_consonants[..1]);
-            cf_name.push_str(&name_consonants[2..4]);
-        } else {
-            cf_name.push_str(&name_consonants);
-            // Push vowels if needed (and there are)
-            while cf_name.len() < 3 && name_vowels.len() > 0 {
-                cf_name.push(name_vowels.remove(0));
-            }
-            // Push Xs for missing chars
-            while cf_name.len() < 3 {
-                cf_name.push('X');
-            }
-        }
-
-        self.codice_parts.name = cf_name;
+        self.codice_parts.name = calc_name_component(&prepare_name(&self.person_data.name));
         &self.codice_parts.name
     }
 
     fn calc_birthdate(&mut self) -> Result<&str, Error> {
         // BIRTHDATE
-        let tm_birthdate: Tm;
-        match time::strptime(&self.persondata.birthdate, "%Y-%m-%d") {
-            Ok(v) => tm_birthdate = v,
+        let tm_birthdate = match time::strptime(&self.person_data.birthdate, "%Y-%m-%d") {
+            Ok(v) => v,
             Err(_e) => bail!("invalid-birthdate"),
         };
+
         let tm_year = tm_birthdate.tm_year + 1900;
-        self.codice_parts.birthyear = if tm_year < CENTURY_BASE {
+        self.codice_parts.birthyear = format!("{:02}", if tm_year < CENTURY_BASE {
             tm_year - 1900
         } else {
             tm_year - CENTURY_BASE
-        }.to_string();
+        });
         self.codice_parts.birthmonth = MONTHLETTERS[tm_birthdate.tm_mon as usize];
         self.codice_parts.birthday = format!(
             "{:02}",
-            if self.persondata.gender == Gender::F {
+            if self.person_data.gender == Gender::F {
                 40 + tm_birthdate.tm_mday
             } else {
                 tm_birthdate.tm_mday
@@ -425,26 +381,20 @@ impl CodiceFiscale {
     }
 
     fn calc_belfiore(&mut self) -> Result<&str, Error> {
-        let rxc_belfiore = Regex::new(PAT_BELFIORE).expect("Regex init error");
-        if !rxc_belfiore.is_match(&self.persondata.belfiore) {
-            bail!("invalid-belfiore-code");
-        }
-
-        self.codice_parts.belfiore = self.persondata.belfiore.to_uppercase();
-        Ok(&self.codice_parts.belfiore)
+        self.codice_parts.place_of_birth = self.person_data.place_of_birth.clone();
+        Ok(&self.codice_parts.place_of_birth.belfiore_code)
     }
 
     // CHECK CHAR
     fn calc_checkchar(&mut self) -> char {
-        let mut checksum: u8 = 0;
-
-        for chi in self.codice.char_indices() {
-            if chi.0 % 2 == 0 {
-                checksum += CHECKCHARS[&chi.1].0
-            } else {
-                checksum += CHECKCHARS[&chi.1].1
-            }
-        }
+        let checksum: u8 = self.codice.char_indices()
+            .fold(0, |acc, x| {
+                acc + if x.0 % 2 == 0 {
+                    CHECKCHARS[&x.1].0
+                } else {
+                    CHECKCHARS[&x.1].1
+                }
+            });
 
         self.codice_parts.checkchar = CHECKMODULI[(checksum % 26) as usize];
         self.codice_parts.checkchar
