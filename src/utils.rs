@@ -10,7 +10,8 @@ fn is_consonant(c: &char) -> bool {
 }
 
 fn extract_consonants(name: &str) -> String {
-    name.to_uppercase().chars()
+    name.to_uppercase()
+        .chars()
         .filter(|x| is_vowel(x))
         .rev()
         .collect()
@@ -20,7 +21,7 @@ fn extract_consonants(name: &str) -> String {
 pub fn prepare_name(name: &str) -> String {
     if extract_consonants(name).len() > 2 {
         let mut res = name.to_uppercase();
-        let mut count: (u8, usize) = (0,0);
+        let mut count: (u8, usize) = (0, 0);
         for (i, ch) in res.chars().enumerate() {
             if is_consonant(&ch) {
                 count.0 += 1;
@@ -38,7 +39,9 @@ pub fn prepare_name(name: &str) -> String {
 }
 
 pub fn calc_name_component(name: &str) -> String {
-    let part_consonants: String = name.to_uppercase().chars()
+    let part_consonants: String = name
+        .to_uppercase()
+        .chars()
         .filter(|x| is_consonant(x))
         .collect();
     let mut part_vowels = extract_consonants(name);

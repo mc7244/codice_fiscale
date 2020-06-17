@@ -21,10 +21,10 @@ extern crate lazy_static;
 pub mod belfiore;
 mod utils;
 
+use belfiore::*;
 use failure::Error;
 use regex::Regex;
 use std::collections::HashMap;
-use belfiore::*;
 use utils::*;
 
 /// Gender enum to specify gender in PersonData struct.
@@ -150,7 +150,7 @@ impl CodiceFiscale {
     ///
     /// ```
     /// use codice_fiscale::*;
-    /// 
+    ///
     /// match CodiceFiscale::new(&PersonData {
     ///     name           : "Michele".to_string(),
     ///     surname        : "Beltrame".to_string(),
@@ -306,7 +306,7 @@ impl CodiceFiscale {
 
         cf.codice_parts.place_of_birth = match BELFIORE_STORE.lookup_belfiore(&codice[11..15]) {
             Some(x) => x.clone(),
-            None => bail!("invalid-belfiore-code")
+            None => bail!("invalid-belfiore-code"),
         };
         cf.person_data.place_of_birth = cf.codice_parts.place_of_birth.clone();
 
@@ -354,11 +354,14 @@ impl CodiceFiscale {
         };
 
         let tm_year = tm_birthdate.tm_year + 1900;
-        self.codice_parts.birthyear = format!("{:02}", if tm_year < CENTURY_BASE {
-            tm_year - 1900
-        } else {
-            tm_year - CENTURY_BASE
-        });
+        self.codice_parts.birthyear = format!(
+            "{:02}",
+            if tm_year < CENTURY_BASE {
+                tm_year - 1900
+            } else {
+                tm_year - CENTURY_BASE
+            }
+        );
         self.codice_parts.birthmonth = MONTHLETTERS[tm_birthdate.tm_mon as usize];
         self.codice_parts.birthday = format!(
             "{:02}",
@@ -387,14 +390,13 @@ impl CodiceFiscale {
 
     // CHECK CHAR
     fn calc_checkchar(&mut self) -> char {
-        let checksum: u8 = self.codice.char_indices()
-            .fold(0, |acc, x| {
-                acc + if x.0 % 2 == 0 {
-                    CHECKCHARS[&x.1].0
-                } else {
-                    CHECKCHARS[&x.1].1
-                }
-            });
+        let checksum: u8 = self.codice.char_indices().fold(0, |acc, x| {
+            acc + if x.0 % 2 == 0 {
+                CHECKCHARS[&x.1].0
+            } else {
+                CHECKCHARS[&x.1].1
+            }
+        });
 
         self.codice_parts.checkchar = CHECKMODULI[(checksum % 26) as usize];
         self.codice_parts.checkchar

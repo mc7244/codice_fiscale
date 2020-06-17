@@ -8,7 +8,7 @@ pub struct Municipality {
 
 /// The database, you can query it using the following functions
 pub struct Belfiore {
-    store: Vec<Municipality>
+    store: Vec<Municipality>,
 }
 
 impl Belfiore {
@@ -17,22 +17,24 @@ impl Belfiore {
         let db: Vec<Municipality> = include_str!("../belfiore.txt")
             .split('\n')
             .map(|x| x.split(',').collect::<Vec<&str>>())
-            .map(|x| Municipality{
+            .map(|x| Municipality {
                 name: x[2].to_owned(),
                 province: x[1].to_owned(),
                 belfiore_code: x[0].to_owned(),
             })
             .collect();
-        Self{store: db}
+        Self { store: db }
     }
     /// Obtain info for a municipality (name, province and Belfiore code)
     pub fn get_info(&self, municipality_name: &str) -> Option<&Municipality> {
-        self.store.iter()
+        self.store
+            .iter()
             .find(|x| x.name == municipality_name.to_uppercase())
     }
     /// Obtain info for a Belfiore code
     pub fn lookup_belfiore(&self, belfiore: &str) -> Option<&Municipality> {
-        self.store.iter()
+        self.store
+            .iter()
             .find(|x| x.belfiore_code == belfiore.to_uppercase())
     }
 }
