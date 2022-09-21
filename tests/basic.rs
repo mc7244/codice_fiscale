@@ -48,8 +48,8 @@ fn t_new_err_birthdate() {
     let mut persondata = make_new_test_persondata();
     persondata.birthdate = "1977-04-32".to_string();
     assert_eq!(
-        format!("{}", CodiceFiscale::new(&persondata).err().unwrap()),
-        "invalid-birthdate"
+        CodiceFiscale::new(&persondata).err().unwrap(),
+        codice_fiscale::Error::InvalidBirthdate(None)
     );
 }
 
@@ -74,11 +74,8 @@ fn t_parse_ok() {
 #[test]
 fn t_parse_invalid_codice_checkchar() {
     assert_eq!(
-        format!(
-            "{}",
-            CodiceFiscale::parse(TEST_CF_ERR_CHECKCHAR).err().unwrap()
-        ),
-        "invalid-checkchar"
+        CodiceFiscale::parse(TEST_CF_ERR_CHECKCHAR).err(),
+        Some(codice_fiscale::Error::InvalidCheckChar)
     );
 }
 
@@ -90,15 +87,15 @@ fn t_check_ok() {
 #[test]
 fn t_check_name_validity() {
     let persondata = make_new_test_persondata();
-    assert!(
-        CodiceFiscale::new(&persondata).unwrap().is_name_valid(&persondata.name)
-    );
+    assert!(CodiceFiscale::new(&persondata)
+        .unwrap()
+        .is_name_valid(&persondata.name));
 }
 
 #[test]
 fn t_check_surname_validity() {
     let persondata = make_new_test_persondata();
-    assert!(
-        CodiceFiscale::new(&persondata).unwrap().is_surname_valid(&persondata.surname)
-    );
+    assert!(CodiceFiscale::new(&persondata)
+        .unwrap()
+        .is_surname_valid(&persondata.surname));
 }

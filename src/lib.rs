@@ -13,8 +13,6 @@ extern crate regex;
 extern crate time;
 
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate lazy_static;
 
 /// This module contains Belfiore codes and it's used to lookup municipality info
@@ -22,10 +20,20 @@ pub mod belfiore;
 mod utils;
 
 use belfiore::*;
-use failure::Error;
 use regex::Regex;
 use std::collections::HashMap;
 use utils::*;
+
+/// Error message
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    InvalidLength,
+    InvalidCheckChar,
+    InvalidName,
+    InvalidSurname,
+    InvalidBirthdate(Option<String>),
+    InvalidBelfioreCode,
+}
 
 /// Gender enum to specify gender in PersonData struct.
 /// Italian government only accepts either male or female!
@@ -73,12 +81,15 @@ pub struct CodiceFiscale {
     codice_parts: CodiceFiscaleParts,
 }
 
-static CENTURY_BASE: i32 = 2000; // This will need to be changed in 2100
-static MONTHLETTERS: [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
-static CHECKMODULI: [char; 26] = [
+const CENTURY_BASE: i32 = 2000; // This will need to be changed in 2100
+const MONTHLETTERS: [char; 12] = ['A', 'B', 'C', 'D', 'E', 'H', 'L', 'M', 'P', 'R', 'S', 'T'];
+const CHECKMODULI: [char; 26] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
     'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
+const DATE_FORMAT: &'static [time::format_description::FormatItem<'static>] = time::macros::format_description!(
+    "[year]-[month]-[day] [hour]:[minute] [offset_hour sign:mandatory]:[offset_minute]"
+);
 lazy_static! {
     static ref CHECKCHARS: HashMap<char, (u8, u8)> = {
         let mut m = HashMap::new();
@@ -245,18 +256,18 @@ impl CodiceFiscale {
 
         // First off, validate CF to see if it's a valid Code
         if codice.len() != 16 {
-            bail!("invalid-length");
+            return Err(Error::InvalidLength);
         }
 
         // The let's see if the check char we calculate matches
         let mut codice_nolast = codice.to_uppercase();
         let codice_checkchar = match codice_nolast.pop() {
             Some(cc) => cc,
-            None => bail!("invalid-checkchar"),
+            None => return Err(Error::InvalidCheckChar),
         };
         cf.codice = codice_nolast;
         if cf.calc_checkchar() != codice_checkchar {
-            bail!("invalid-checkchar");
+            return Err(Error::InvalidCheckChar);
         }
 
         cf.codice_parts.surname = codice[0..3].to_string();
@@ -264,7 +275,7 @@ impl CodiceFiscale {
             .unwrap()
             .is_match(&cf.codice_parts.surname)
         {
-            bail!("invalid-surname");
+            return Err(Error::InvalidSurname);
         }
         cf.person_data.surname = cf.codice_parts.surname.clone();
 
@@ -273,7 +284,7 @@ impl CodiceFiscale {
             .unwrap()
             .is_match(&cf.codice_parts.name)
         {
-            bail!("invalid-name");
+            return Err(Error::InvalidName);
         }
         cf.person_data.name = cf.codice_parts.name.clone();
 
@@ -281,8 +292,9 @@ impl CodiceFiscale {
         // (this has implications only for parsing, not for validation, unless we stump into and unexisting Feb29)
         cf.codice_parts.birthyear = codice[6..8].to_string();
         let birthyear_num = CENTURY_BASE
-            + i32::from_str_radix(&cf.codice_parts.birthyear, 10).expect("invalid-birthyear");
-        let tm_now_year = time::now_utc().tm_year + 1900;
+            + i32::from_str_radix(&cf.codice_parts.birthyear, 10)
+                .map_err(|_| Error::InvalidBirthdate(Some(cf.codice_parts.birthyear.clone())))?;
+        let tm_now_year = time::OffsetDateTime::now_utc().year();
         let birthyear = if tm_now_year > birthyear_num {
             birthyear_num
         } else {
@@ -295,18 +307,18 @@ impl CodiceFiscale {
         birthdate.push('-');
         let birthmonth = MONTHLETTERS
             .binary_search(&cf.codice_parts.birthmonth)
-            .expect("invalid-birthmonth");
+            .map_err(|_| Error::InvalidBirthdate(None))?;
         birthdate.push_str(&format!("{:02}", (birthmonth + 1)));
         birthdate.push('-');
         birthdate.push_str(&cf.codice_parts.birthday);
-        match time::strptime(&birthdate, "%Y-%m-%d") {
+        match time::OffsetDateTime::parse(&(birthdate.clone() + " 00:00 +00:00"), DATE_FORMAT) {
             Ok(_v) => cf.person_data.birthdate = birthdate,
-            Err(_e) => bail!("invalid-birthdate".to_string() + &birthdate),
+            Err(_e) => return Err(Error::InvalidBirthdate(Some(birthdate.clone()))),
         };
 
         cf.codice_parts.place_of_birth = match BELFIORE_STORE.lookup_belfiore(&codice[11..15]) {
             Some(x) => x.clone(),
-            None => bail!("invalid-belfiore-code"),
+            None => return Err(Error::InvalidBelfioreCode),
         };
         cf.person_data.place_of_birth = cf.codice_parts.place_of_birth.clone();
 
@@ -348,12 +360,15 @@ impl CodiceFiscale {
 
     fn calc_birthdate(&mut self) -> Result<&str, Error> {
         // BIRTHDATE
-        let tm_birthdate = match time::strptime(&self.person_data.birthdate, "%Y-%m-%d") {
+        let tm_birthdate = match time::OffsetDateTime::parse(
+            &((&self).person_data.birthdate.clone() + " 00:00 +00:00"),
+            DATE_FORMAT,
+        ) {
             Ok(v) => v,
-            Err(_e) => bail!("invalid-birthdate"),
+            Err(_e) => return Err(Error::InvalidBirthdate(None)),
         };
 
-        let tm_year = tm_birthdate.tm_year + 1900;
+        let tm_year = tm_birthdate.year();
         self.codice_parts.birthyear = format!(
             "{:02}",
             if tm_year < CENTURY_BASE {
@@ -362,13 +377,13 @@ impl CodiceFiscale {
                 tm_year - CENTURY_BASE
             }
         );
-        self.codice_parts.birthmonth = MONTHLETTERS[tm_birthdate.tm_mon as usize];
+        self.codice_parts.birthmonth = MONTHLETTERS[tm_birthdate.month() as usize - 1];
         self.codice_parts.birthday = format!(
             "{:02}",
             if self.person_data.gender == Gender::F {
-                40 + tm_birthdate.tm_mday
+                40 + tm_birthdate.day()
             } else {
-                tm_birthdate.tm_mday
+                tm_birthdate.day()
             }
         );
         self.codice_parts
