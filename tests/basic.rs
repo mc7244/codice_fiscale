@@ -72,6 +72,24 @@ fn t_parse_ok() {
 }
 
 #[test]
+fn t_parse_female() {
+    let cf = CodiceFiscale::parse("RSSMRA70A41H501W");
+    assert!(cf.is_ok());
+    let cf = cf.unwrap();
+    assert_eq!("1970-01-01", cf.get_person_data().birthdate);
+    assert!(cf.is_name_valid("Maria"));
+    assert!(cf.is_surname_valid("Rossi"));
+}
+
+#[test]
+fn t_check_surname() {
+    let cf = CodiceFiscale::parse("RSSSCC80A01A944N");
+    assert!(cf.is_ok());
+    let cf = cf.unwrap();
+    assert!(cf.is_name_valid("Isacco"));
+}
+
+#[test]
 fn t_parse_invalid_codice_checkchar() {
     assert_eq!(
         CodiceFiscale::parse(TEST_CF_ERR_CHECKCHAR).err(),
