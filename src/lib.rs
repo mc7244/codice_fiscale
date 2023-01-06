@@ -302,7 +302,15 @@ impl CodiceFiscale {
         };
 
         cf.codice_parts.birthmonth = codice.chars().nth(8).unwrap();
-        cf.codice_parts.birthday = codice[9..11].to_string();
+        let birthday = codice[9..11].to_string();
+        let mut birthday: u8 = birthday
+            .parse()
+            .map_err(|_| Error::InvalidBirthdate(Some(birthday)))?;
+        if birthday > 40 {
+            cf.person_data.gender = Gender::F;
+            birthday -= 40;
+        }
+        cf.codice_parts.birthday = format!("{:02}", birthday);
         let mut birthdate: String = format!("{:04}", birthyear);
         birthdate.push('-');
         let birthmonth = MONTHLETTERS
@@ -338,23 +346,23 @@ impl CodiceFiscale {
 
     /// Check if the given name is valid for this fiscal code
     pub fn is_name_valid(&self, name: &str) -> bool {
-        calc_name_component(&prepare_name(name)) == self.codice_parts.name
+        calc_name_component(name) == self.codice_parts.name
     }
 
     /// Check if the given surname is valid for this fiscal code
     pub fn is_surname_valid(&self, surname: &str) -> bool {
-        calc_name_component(surname) == self.codice_parts.surname
+        calc_surname_component(surname) == self.codice_parts.surname
     }
 
     // SURNAME
     fn calc_surname(&mut self) -> &str {
-        self.codice_parts.surname = calc_name_component(&self.person_data.surname);
+        self.codice_parts.surname = calc_surname_component(&self.person_data.surname);
         &self.codice_parts.surname
     }
 
     // NAME
     fn calc_name(&mut self) -> &str {
-        self.codice_parts.name = calc_name_component(&prepare_name(&self.person_data.name));
+        self.codice_parts.name = calc_name_component(&self.person_data.name);
         &self.codice_parts.name
     }
 

@@ -17,28 +17,39 @@ fn extract_consonants(name: &str) -> String {
         .collect()
 }
 
-/// Remove the 2nd consonant
-pub fn prepare_name(name: &str) -> String {
-    if extract_consonants(name).len() > 2 {
-        let mut res = name.to_uppercase();
-        let mut count: (u8, usize) = (0, 0);
-        for (i, ch) in res.chars().enumerate() {
-            if is_consonant(&ch) {
-                count.0 += 1;
-                count.1 = i;
-            }
-            if count.0 == 2 {
-                break;
-            }
-        }
-        res.remove(count.1);
-        res
+pub fn calc_name_component(name: &str) -> String {
+    let name = name.to_uppercase();
+    let consonants = name.chars().filter(is_consonant);
+    let mut consonants: String = if consonants.count() <= 3 {
+        name.chars().filter(is_consonant).take(3).collect()
     } else {
-        name.to_owned()
+        name.chars()
+            .filter(is_consonant)
+            .enumerate()
+            .filter(|x| x.0 != 1)
+            .map(|x| x.1)
+            .take(3)
+            .collect()
+    };
+
+    if consonants.len() < 3 {
+        consonants += &name
+            .chars()
+            .filter(is_vowel)
+            .take(3 - consonants.len())
+            .collect::<String>();
     }
+    if consonants.len() < 3 {
+        consonants += &['X']
+            .iter()
+            .cycle()
+            .take(3 - consonants.len())
+            .collect::<String>();
+    }
+    dbg!(consonants)
 }
 
-pub fn calc_name_component(name: &str) -> String {
+pub fn calc_surname_component(name: &str) -> String {
     let part_consonants: String = name
         .to_uppercase()
         .chars()
